@@ -1,3 +1,3 @@
-from game import game
+from game.game import Game
 
-game.main()
+game1 = Game()
