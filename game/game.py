@@ -63,7 +63,6 @@ class Game:
                     print(self)
                     self.passive_move()
 
-
     def __str__(self):
         return str([self.pieces_to_highligth, self.player, self.turn])
 
@@ -71,7 +70,7 @@ class Game:
         # Capturar la posición del mouse, crear un rectangulo y verificar en cual tablero hizo click
         mx, my = pygame.mouse.get_pos()
         mouse_rect = pygame.Rect(mx, my, 1, 1)
-        board = self.get_selected_board(mouse_rect, True)
+        board = self.get_selected_board(mouse_rect)
 
         if board is None:
             print("Ningún tablero ha sido seleccionado")
@@ -122,7 +121,7 @@ class Game:
             # Mover la ficha
             piece_to_move.move(piece_where_is_moved)
             # Terminar el bucle
-            clicked = True
+            # clicked = True
             # Limpiar las fichas a las que hay que mostrar highlight
             self.pieces_to_highligth = []
             # Cambiar el turno
@@ -130,14 +129,10 @@ class Game:
             return True
 
     # Obtiene el tablero donde dió click el jugador
-    def get_selected_board(self, mouse_rect, passive_move):
+    def get_selected_board(self, mouse_rect):
         for board in self.boards:
-            if passive_move:
-                if mouse_rect.colliderect(board) and self.player == board.player:
-                    return board
-            else:
-                if mouse_rect.colliderect(board) and self.player != board.color:
-                    return board
+            if mouse_rect.colliderect(board) and self.player == board.player:
+                return board
         return None
 
     # Obtiene la coordenada del primer movimiento
