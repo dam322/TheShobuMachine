@@ -5,11 +5,12 @@ from models.piece import Piece
 
 class Board:
 
-    def __init__(self, x_pos, y_pos, piece_size, temp_to_center):
+    def __init__(self, x_pos, y_pos, piece_size, temp_to_center, player, color):
         self.map = []
-
         self.x = x_pos
         self.y = y_pos
+        self.player = player
+        self.color = color
 
         for y in range(4):
             value = 0

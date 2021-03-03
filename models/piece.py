@@ -35,21 +35,14 @@ class Piece:
             pygame.draw.rect(screen, (0, 0, 0), self.rect)
 
     def draw_highlight(self, screen):
-        # if self.value == 1:
         pygame.draw.rect(screen, (155, 155, 155), self.rect)
-        # elif self.value == 2:
-        # pygame.draw.rect(screen, (225, 225, 255), self.rect)
 
     def update(self):
         pass
 
-    def is_valid_moves(self, x, y):
-        return (x, y) in self.valid_moves
-
+    # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
     def move(self, piece):
-        # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
         self.value, piece.value = piece.value, self.value
-        # self.valid_moves, piece.valid_moves = piece.valid_moves, self.valid_moves
 
     def get_coordinates(self):
         return self.x, self.y
