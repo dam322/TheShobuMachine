@@ -36,9 +36,8 @@ class Game:
 
         self.boards = [self.board1, self.board2, self.board3, self.board4]
         self.running = True
-
-        # Turno del jugador blano
-        self.turn = False
+        pygame.font.init()  # you have to call this at the start,
+        # Turno del jugador blanco
         self.pieces_to_highligth = []
         self.player = 1 if self.turn else 2
         self.game_loop()
@@ -128,30 +127,6 @@ class Game:
             self.turn = not self.turn
             return True
 
-    # Obtiene el tablero donde dió click el jugador
-    def get_selected_board(self, mouse_rect):
-        for board in self.boards:
-            if mouse_rect.colliderect(board) and self.player == board.player:
-                return board
-        return None
-
-    # Obtiene la coordenada del primer movimiento
-    def get_selected_piece(self, mouse_rect, selected_board):
-        for y in range(4):
-            for x in range(4):
-                if mouse_rect.colliderect(selected_board.map[y][x].rect) and \
-                        selected_board.map[y][x].value == self.player:
-                    return selected_board.map[y][x]
-        return None
-
-    # Obtiene la coordenada del movimiento hacia donde quiere moverse
-    def get_selected_next_piece(self, mouse_rect, selected_board):
-        for y in range(4):
-            for x in range(4):
-                if mouse_rect.colliderect(selected_board.map[y][x].rect):
-                    return selected_board.map[y][x]
-        return None
-
     # TODO Verificar correctamente cuales movimientos son válidos teniendo en cuenta el valor y de que no se pueden
     #  saltar fichas
     # Obtiene las coordendas disponibles donde puede hacer un movimiento
@@ -159,9 +134,19 @@ class Game:
         available_coordinates = []
         for line in board.map:
             for piece in line:
-                if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player):
-                    self.pieces_to_highligth.append(piece)
-                    available_coordinates.append((piece.x, piece.y))
+                if self.player.movimiento_pasivo:
+                    if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player_aux):
+                        self.pieces_to_highligth.append(piece)
+                        available_coordinates.append((piece.x, piece.y))
+                else:
+                    new_x = piece_to_move.x - piece.x
+                    new_y = piece_to_move.y - piece.y
+                    codicion_posicion = self.player.new_x == new_x and self.player.new_y == new_y
+                    if ((piece.x, piece.y) in piece_to_move.valid_moves and (
+                            piece.value != self.player_aux) and codicion_posicion):
+                        self.pieces_to_highligth.append(piece)
+                        available_coordinates.append((piece.x, piece.y))
+
         self.update_highlight()
         return available_coordinates
 
