@@ -50,15 +50,19 @@ class Piece:
         pass
 
     # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
-    def move(self, piece, movimiento_pasivo):
+    def move(self, piece, movimiento_pasivo, val):
         if movimiento_pasivo:
             # No se pueden empujar fichas
-            self.value, piece.value = piece.value, self.value
-            print("Movimiento 1")
+            if piece.value == val:
+                self.value, piece.value = piece.value, self.value
+                return True
+            else:
+                return False
         else:
             # Se pueden empujar fichas
             self.value, piece.value = piece.value, self.value
             print("Movimiento 2")
+            return True
 
     def get_coordinates(self):
         return self.x, self.y

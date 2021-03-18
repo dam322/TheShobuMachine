@@ -1,8 +1,10 @@
 class Player:
-    def __init__(self, turno=2, movimiento_pasivo=True, otro_player=None, lado_pasivo=None):
+    def __init__(self, turno=2, movimiento_pasivo=True, otro_player=None, lado_pasivo=None, value=0):
+
         self.contador_turno = turno
         self.lado_pasivo = lado_pasivo
         self.lado_agresivo = None
+        self.value = value
         if movimiento_pasivo:
             self.movimiento_pasivo = movimiento_pasivo
             self.movimiento_agresivo = not movimiento_pasivo
@@ -14,7 +16,6 @@ class Player:
         self.new_y = None
 
     def move(self, lado_agresivo):
-
         if self.contador_turno > 0:
             self.contador_turno -= 1
             if self.contador_turno == 1:

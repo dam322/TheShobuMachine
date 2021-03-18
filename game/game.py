@@ -1,7 +1,7 @@
 import pygame
 
 from models.board import Board
-from models.Player import Player
+from models.player import Player
 from models.piece import Piece
 
 
@@ -15,9 +15,10 @@ class Game:
         self.padding = 30
         # Distancia para centrar las piezas y que no ocupen el espacio del tablero
         self.temp_to_center = 20
+        self.debug_size = 150
 
         # Calcular el tamaño de la pantalla
-        self.screen = pygame.display.set_mode((8 * self.piece_size + self.space_between_boards + 2 * self.padding,
+        self.screen = pygame.display.set_mode((8 * self.piece_size + self.space_between_boards + 2 * self.padding + self.debug_size,
                                                8 * self.piece_size + self.space_between_boards + 2 * self.padding))
         # Reloj auxiliar
         self.clock = pygame.time.Clock()
@@ -43,8 +44,8 @@ class Game:
         self.pieces_to_highligth = []
         self.player_aux = 2
 
-        self.player1 = Player(0, False, lado_pasivo="SUPERIOR")
-        self.player2 = Player(otro_player=self.player1, lado_pasivo="INFERIOR")
+        self.player1 = Player(0, False, lado_pasivo="SUPERIOR", value=1)
+        self.player2 = Player(otro_player=self.player1, lado_pasivo="INFERIOR", value=2)
 
         self.player1.otro_player = self.player2
         self.player = self.player1 if self.player1.is_playing() else self.player2
@@ -164,7 +165,9 @@ class Game:
             else:
                 print("Movimiento agresivo concretado")
             # Mover la ficha
-            piece_to_move.move(piece_where_is_moved, self.player.movimiento_pasivo)
+
+            if not piece_to_move.move(piece_where_is_moved, self.player.movimiento_pasivo, 0):
+                continue
             # Terminar el bucle
             # Limpiar las fichas a las que hay que mostrar highlight
             self.pieces_to_highligth = []
@@ -179,12 +182,57 @@ class Game:
     # Obtiene las coordendas disponibles donde puede hacer un movimiento
     def get_available_coordinates(self, board, piece_to_move: Piece):
         available_coordinates = []
+        direcciones = ["Derecha",
+                       "Izquierda",
+                       "Superior",
+                       "Inferior",
+                       "Inferior derecha",
+                       "Superior izquierda",
+                       "Inferior izquierda",
+                       "Superior derecha",
+                       "Derecha 2",
+                       "Izquierda 2",
+                       "Superior 2",
+                       "Inferior 2",
+                       "Inferior derecha 2",
+                       "Superior izquierda 2",
+                       "Inferior izquierda 2",
+                       "Superior derecha 2"]
+        cambios = {
+            (1, 0): (2, 0),  # Derecha
+            (-1, 0): (-2, 0),  # Izquierda
+            (0, 1): (0, 2),  # Superior
+            (0, -1): (0, -2),  # Inferior
+            (1, 1): (2, 2),  # Inferior derecha
+            (-1, -1): (-2, -2),  # Superior izquierda
+            (1, -1): (2, -2),  # Inferior izquierda
+            (-1, 1): (-2, 2),  # Superior derecha
+        }
+        posiciones_bloqueadas = []
         for line in board.map:
             for piece in line:
                 if self.player.movimiento_pasivo:
-                    if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player_aux):
-                        self.pieces_to_highligth.append(piece)
-                        available_coordinates.append((piece.x, piece.y))
+                    if piece.value != 0:
+                        new_x = piece_to_move.x - piece.x
+                        new_y = piece_to_move.y - piece.y
+                        if new_x < 2 and new_y < 2:
+                            posiciones_bloqueadas.append((new_x, new_y))
+                            if (new_x, new_y) in cambios.keys():
+                                posiciones_bloqueadas.append(cambios[(new_x, new_y)])
+                                print(cambios[(new_x, new_y)])
+                else:
+                    print(2)
+            # TODO Validar cuales movimientos son válidos en el movimiento agresivo
+        print(posiciones_bloqueadas)
+        for line in board.map:
+            for piece in line:
+                if self.player.movimiento_pasivo:
+                    new_x = piece_to_move.x - piece.x
+                    new_y = piece_to_move.y - piece.y
+                    if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player_aux) and not (new_x, new_y) in posiciones_bloqueadas:
+                        if piece.value == 0:
+                            self.pieces_to_highligth.append(piece)
+                            available_coordinates.append((piece.x, piece.y))
                 else:
                     new_x = piece_to_move.x - piece.x
                     new_y = piece_to_move.y - piece.y
