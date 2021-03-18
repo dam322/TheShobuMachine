@@ -1,6 +1,8 @@
 import pygame
 
 from models.board import Board
+from models.Player import Player
+from models.piece import Piece
 
 
 class Game:
@@ -23,23 +25,29 @@ class Game:
         # Iniciar los 4 tableros
         self.board1 = Board(self.padding,
                             self.padding,
-                            self.piece_size, self.temp_to_center, 1, 1)
+                            self.piece_size, self.temp_to_center, lado_agresivo="IZQUIERDA", lado_pasivo="SUPERIOR")
         self.board2 = Board(self.padding + self.piece_size * 4 + self.space_between_boards,
                             self.padding,
-                            self.piece_size, self.temp_to_center, 1, 2)
+                            self.piece_size, self.temp_to_center, lado_agresivo="DERECHA", lado_pasivo="SUPERIOR")
         self.board3 = Board(self.padding,
                             self.padding + self.piece_size * 4 + self.space_between_boards,
-                            self.piece_size, self.temp_to_center, 2, 1)
+                            self.piece_size, self.temp_to_center, lado_agresivo="IZQUIERDA", lado_pasivo="INFERIOR")
         self.board4 = Board(self.padding + self.piece_size * 4 + self.space_between_boards,
                             self.padding + self.piece_size * 4 + self.space_between_boards,
-                            self.piece_size, self.temp_to_center, 2, 2)
+                            self.piece_size, self.temp_to_center, lado_agresivo="DERECHA", lado_pasivo="INFERIOR")
 
         self.boards = [self.board1, self.board2, self.board3, self.board4]
         self.running = True
         pygame.font.init()  # you have to call this at the start,
         # Turno del jugador blanco
         self.pieces_to_highligth = []
-        self.player = 1 if self.turn else 2
+        self.player_aux = 2
+
+        self.player1 = Player(0, False, lado_pasivo="SUPERIOR")
+        self.player2 = Player(otro_player=self.player1, lado_pasivo="INFERIOR")
+
+        self.player1.otro_player = self.player2
+        self.player = self.player1 if self.player1.is_playing() else self.player2
         self.game_loop()
 
     def game_loop(self):
@@ -63,7 +71,38 @@ class Game:
                     self.passive_move()
 
     def __str__(self):
-        return str([self.pieces_to_highligth, self.player, self.turn])
+        return f""
+
+        # Obtiene el tablero donde dió click el jugador
+
+    def get_selected_board(self, mouse_rect):
+        for board in self.boards:
+            if self.player.movimiento_pasivo:
+                if mouse_rect.colliderect(board) and self.player.lado_pasivo == board.lado_pasivo:
+                    return board
+            else:
+                if mouse_rect.colliderect(board) and self.player.lado_agresivo == board.lado_agresivo:
+                    return board
+        return None
+
+        # Obtiene la coordenada del primer movimiento
+
+    def get_selected_piece(self, mouse_rect, selected_board):
+        for y in range(4):
+            for x in range(4):
+                if mouse_rect.colliderect(selected_board.map[y][x].rect) and \
+                        selected_board.map[y][x].value == self.player_aux:
+                    return selected_board.map[y][x]
+        return None
+
+    # Obtiene la coordenada del movimiento hacia donde quiere moverse
+    def get_selected_next_piece(self, mouse_rect, selected_board: Board):
+
+        for y in range(4):
+            for x in range(4):
+                if mouse_rect.colliderect(selected_board.map[y][x].rect):
+                    return selected_board.map[y][x]
+        return None
 
     def passive_move(self):
         # Capturar la posición del mouse, crear un rectangulo y verificar en cual tablero hizo click
@@ -75,16 +114,18 @@ class Game:
             print("Ningún tablero ha sido seleccionado")
             return False
 
-        self.player = 1 if self.turn else 2
+        self.player_aux, self.player = (1, self.player1) if self.player1.is_playing() else (2, self.player2)
+
         piece_to_move = self.get_selected_piece(mouse_rect, board)
         # Si clickeó en una ficha que no sea del jugador actual no debe hacer nada
         if piece_to_move is None:
             print("Ficha incorrecta")
             return False
         available_coordinates = self.get_available_coordinates(board, piece_to_move)
-        return self.validate_second_click(piece_to_move, board, available_coordinates)
+        if available_coordinates:
+            return self.validate_second_click(piece_to_move, board, available_coordinates)
 
-    def validate_second_click(self, piece_to_move, board, available_coordinates):
+    def validate_second_click(self, piece_to_move: Piece, board: Board, available_coordinates):
         clicked = False
         while not clicked:
             # Esperar al siguiente click para hacer el movimiento
@@ -98,7 +139,10 @@ class Game:
 
             # Verificar que sea un movimiento válido
             piece_where_is_moved = self.get_selected_next_piece(mouse_rect, board)
-
+            if self.player.movimiento_pasivo:
+                self.player.new_x, self.player.new_y = piece_to_move.x - piece_where_is_moved.x, piece_to_move.y - piece_where_is_moved.y
+            # else:
+            #    self.player.new_x, self.player.new_y = None, None
             # Verificar que clickee en una ficha del mismo tablero
             if piece_where_is_moved is None:
                 print("Click en ficha equivocada")
@@ -115,22 +159,25 @@ class Game:
                 print("Coordenada incorrecta: ", piece_where_is_moved.get_coordinates(),
                       available_coordinates)
                 continue
-
-            print("movimiento apropiado")
+            if self.player.movimiento_pasivo:
+                print("Movimiento pasivo concretado")
+            else:
+                print("Movimiento agresivo concretado")
             # Mover la ficha
-            piece_to_move.move(piece_where_is_moved)
+            piece_to_move.move(piece_where_is_moved, self.player.movimiento_pasivo)
             # Terminar el bucle
-            # clicked = True
             # Limpiar las fichas a las que hay que mostrar highlight
             self.pieces_to_highligth = []
             # Cambiar el turno
-            self.turn = not self.turn
+            self.player.move(board.lado_agresivo)
+            print(self)
+            self.player_aux, self.player = (1, self.player1) if self.player1.is_playing() else (2, self.player2)
             return True
 
     # TODO Verificar correctamente cuales movimientos son válidos teniendo en cuenta el valor y de que no se pueden
     #  saltar fichas
     # Obtiene las coordendas disponibles donde puede hacer un movimiento
-    def get_available_coordinates(self, board, piece_to_move):
+    def get_available_coordinates(self, board, piece_to_move: Piece):
         available_coordinates = []
         for line in board.map:
             for piece in line:
@@ -158,7 +205,7 @@ class Game:
     def draw(self):
         # Fondo
         # screen.fill((38, 163, 144))
-        if self.turn:
+        if self.player1.is_playing():
             self.screen.fill((255, 255, 255))
         else:
             self.screen.fill((0, 0, 0))
