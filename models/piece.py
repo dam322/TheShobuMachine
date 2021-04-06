@@ -1,8 +1,12 @@
+from copy import copy
+
 import pygame
 
 
 class Piece:
+
     def __init__(self, value, init_x, init_y, piece_size, temp_to_center, x, y):
+        self.selected = False
         self.value = value
         self.rect = pygame.Rect(init_x + x * piece_size,
                                 init_y + y * piece_size,
@@ -41,7 +45,7 @@ class Piece:
         elif self.value == 2:
             pygame.draw.rect(screen, (0, 0, 0), self.draw_rect)
         myfont = pygame.font.SysFont('Comic Sans MS', 10)
-        self.draw_string(f"{self.x, self.y}", self.rect.x, self.rect.y, screen, myfont)
+        self.draw_string(f"{self.y, self.x}", self.rect.x, self.rect.y, screen, myfont)
 
     def draw_highlight(self, screen):
         if self.selected:
@@ -52,8 +56,26 @@ class Piece:
     def update(self):
         pass
 
+    def get_salto(self, piece_to_move):
+        dx = self.x - piece_to_move.x
+        dy = self.y - piece_to_move.y
+        new_dx = 0
+        new_dy = 0
+        if dx < 0:
+            new_dx = 1
+        elif dx > 0:
+            new_dx = -1
+        if dy < 0:
+            new_dy = 1
+        elif dy > 0:
+            new_dy = -1
+        # Verificar la siguiente ficha
+        next_x = piece_to_move.x + new_dx
+        next_y = piece_to_move.y + new_dy
+        return next_x, next_y, dx, dy
+
     # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
-    def move(self, piece, movimiento_pasivo, val):
+    def move(self, piece_to_move, movimiento_pasivo, val, board):
         if movimiento_pasivo:
             # No se pueden empujar fichas
             if piece_to_move.value == val:
@@ -62,6 +84,7 @@ class Piece:
             else:
                 return False
         else:
+            print("Movimiento agresivo")
             # Se pueden empujar fichas
             next_x, next_y, _, _ = self.get_salto(piece_to_move)
 
