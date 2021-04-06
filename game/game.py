@@ -42,6 +42,7 @@ class Game:
         pygame.font.init()  # you have to call this at the start,
         # Turno del jugador blanco
         self.pieces_to_highligth = []
+        self.piece_to_push = []
         self.player_aux = 2
 
         self.player1 = Player(0, False, lado_pasivo="SUPERIOR", value=1)
@@ -134,7 +135,6 @@ class Game:
             # Si el evento no es un click entonces debe esperar al siguiente evento
             if event.type != pygame.MOUSEBUTTONDOWN:
                 continue
-
             mx, my = pygame.mouse.get_pos()
             mouse_rect = pygame.Rect(mx, my, 1, 1)
 
@@ -213,24 +213,30 @@ class Game:
             for piece in line:
                 if self.player.movimiento_pasivo:
                     if piece.value != 0:
-                        new_x = piece_to_move.x - piece.x
-                        new_y = piece_to_move.y - piece.y
-                        if new_x < 2 and new_y < 2:
-                            posiciones_bloqueadas.append((new_x, new_y))
-                            if (new_x, new_y) in cambios.keys():
-                                posiciones_bloqueadas.append(cambios[(new_x, new_y)])
-                                print(cambios[(new_x, new_y)])
-                else:
-                    print(2)
-            # TODO Validar cuales movimientos son válidos en el movimiento agresivo
-        print(posiciones_bloqueadas)
+                        dx = piece_to_move.x - piece.x
+                        dy = piece_to_move.y - piece.y
+                        # Sólo se puede mover máximo 2 fichas
+                        if dx < 2 and dy < 2:
+                            posiciones_bloqueadas.append((dx, dy))
+                            # Si hay una ficha en una posición se bloquea la que estén en la misma dirección
+                            # respecto a la ficha que se desea mover
+                            if (dx, dy) in cambios.keys():
+                                posiciones_bloqueadas.append(cambios[(dx, dy)])
+
+        # print(posiciones_bloqueadas)
         for line in board.map:
             for piece in line:
                 if self.player.movimiento_pasivo:
-                    new_x = piece_to_move.x - piece.x
-                    new_y = piece_to_move.y - piece.y
-                    if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player_aux) and not (new_x, new_y) in posiciones_bloqueadas:
+                    # Se calculan los dx y dy
+                    dx = piece_to_move.x - piece.x
+                    dy = piece_to_move.y - piece.y
+                    # Se verifica si es un movimiento valido y si no está en las posiciones bloqueadas.
+                    #  que no sea una ficha del mismo jugador.
+                    if (piece.x, piece.y) in piece_to_move.valid_moves and (piece.value != self.player_aux) and not \
+                            (dx, dy) in posiciones_bloqueadas:
+                        # Si es un espacio vacío
                         if piece.value == 0:
+                            # Se resaltan las fichas que estén vacías
                             self.pieces_to_highligth.append(piece)
                             available_coordinates.append((piece.x, piece.y))
                 else:
@@ -273,9 +279,14 @@ class Game:
         for piece in self.pieces_to_highligth:
             piece.draw_highlight(self.screen)
 
+    def draw_push(self, screen):
+        for piece in self.piece_to_push:
+            piece.x, piece.y = 5, 8
+            piece.draw(screen)
+
     # Actualiza el tablero y sus elementos
     def update(self):
         for board in self.boards:
             board.update()
-
+        self.draw_push(self.screen)
         pygame.display.update()

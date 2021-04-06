@@ -44,7 +44,10 @@ class Piece:
         self.draw_string(f"{self.x, self.y}", self.rect.x, self.rect.y, screen, myfont)
 
     def draw_highlight(self, screen):
-        pygame.draw.rect(screen, (155, 155, 155), self.draw_rect)
+        if self.selected:
+            pygame.draw.rect(screen, (0, 155, 155), self.draw_rect)
+        else:
+            pygame.draw.rect(screen, (155, 155, 155), self.draw_rect)
 
     def update(self):
         pass
@@ -53,15 +56,38 @@ class Piece:
     def move(self, piece, movimiento_pasivo, val):
         if movimiento_pasivo:
             # No se pueden empujar fichas
-            if piece.value == val:
-                self.value, piece.value = piece.value, self.value
+            if piece_to_move.value == val:
+                self.value, piece_to_move.value = piece_to_move.value, self.value
                 return True
             else:
                 return False
         else:
             # Se pueden empujar fichas
-            self.value, piece.value = piece.value, self.value
-            print("Movimiento 2")
+            next_x, next_y, _, _ = self.get_salto(piece_to_move)
+
+            dentro_mapa = 0 <= next_x < len(board.map) and 0 <= next_y < len(board.map)
+
+            # condicion_existe = board.map[next_y][next_x].value == 0
+            if dentro_mapa:
+                print("EMPUJE")
+                if piece_to_move.value == 0:
+                    value_self = copy(self.value)
+                    self.value = val
+                    piece_to_move.value = value_self
+                else:
+                    next_piece = board.map[next_y][next_x]
+                    value_self = copy(self.value)
+                    value_piece = copy(piece_to_move.value)
+                    self.value = val
+                    piece_to_move.value = value_self
+                    next_piece.value = value_piece
+
+            else:
+                value_self = copy(self.value)
+                # value_piece = piece.value
+                self.value = val
+                piece_to_move.value = value_self
+                # next_piece.value = value_piece
             return True
 
     def get_coordinates(self):

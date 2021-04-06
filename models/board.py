@@ -39,7 +39,7 @@ class Board:
 
         if not self.active:
             return
-        #Dibujar lineas
+        # Dibujar lineas
         for x in range(5):
             pygame.draw.rect(screen, (155, 155, 155), pygame.Rect(self.x + x * piece_size,
                                                                   self.y,
