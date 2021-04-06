@@ -23,7 +23,7 @@ class Board:
 
             lista = list()
             for x in range(4):
-                lista.append(Piece(value, self.x, self.y, piece_size, temp_to_center, x, y))
+                lista.append(Piece(value, piece_size, temp_to_center, x, y, self))
             self.map.append(lista)
 
         self.rect = pygame.Rect(x_pos,
@@ -52,8 +52,3 @@ class Board:
         for y in range(4):
             for x in range(4):
                 self.map[y][x].draw(screen)
-
-    def update(self):
-        for y in range(4):
-            for x in range(4):
-                self.map[y][x].update()

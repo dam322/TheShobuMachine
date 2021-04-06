@@ -12,8 +12,12 @@ class Player:
             self.movimiento_pasivo = False
             self.movimiento_agresivo = False
         self.otro_player = otro_player
-        self.new_x = None
-        self.new_y = None
+        self.passive_move_dx = None
+        self.passive_move_dy = None
+
+    def update_passive_dx(self, piece_to_move, piece_where_is_moved):
+        self.passive_move_dx = piece_to_move.x - piece_where_is_moved.x
+        self.passive_move_dy = piece_to_move.y - piece_where_is_moved.y
 
     def move(self, lado_agresivo):
         if self.contador_turno > 0:
@@ -30,8 +34,8 @@ class Player:
                 self.otro_player.reset()
                 self.movimiento_pasivo = False
                 self.movimiento_agresivo = False
-                self.new_x = None
-                self.new_y = None
+                self.passive_move_dx = None
+                self.passive_move_dy = None
         else:
             self.movimiento_agresivo = False
             self.movimiento_pasivo = False
@@ -46,4 +50,4 @@ class Player:
 
     def __str__(self):
         return f"Movimiento pasivo : {self.movimiento_pasivo} Movimiento agresivo : {self.movimiento_agresivo} " \
-               f"Contador : {self.contador_turno} NewX: {self.new_x} NewY: {self.new_y}  "
+               f"Contador : {self.contador_turno} NewX: {self.passive_move_dx} NewY: {self.passive_move_dy}  "

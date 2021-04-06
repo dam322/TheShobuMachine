@@ -5,15 +5,16 @@ import pygame
 
 class Piece:
 
-    def __init__(self, value, init_x, init_y, piece_size, temp_to_center, x, y):
+    def __init__(self, value, piece_size, temp_to_center, x, y, board):
+        self.board = board
         self.selected = False
         self.value = value
-        self.rect = pygame.Rect(init_x + x * piece_size,
-                                init_y + y * piece_size,
+        self.rect = pygame.Rect(board.x + x * piece_size,
+                                board.y + y * piece_size,
                                 piece_size,
                                 piece_size)
-        self.draw_rect = pygame.Rect(init_x + x * piece_size + temp_to_center / 2,
-                                     init_y + y * piece_size + temp_to_center / 2,
+        self.draw_rect = pygame.Rect(board.x + x * piece_size + temp_to_center / 2,
+                                     board.y + y * piece_size + temp_to_center / 2,
                                      piece_size - temp_to_center,
                                      piece_size - temp_to_center)
         self.x = x
@@ -53,9 +54,6 @@ class Piece:
         else:
             pygame.draw.rect(screen, (155, 155, 155), self.draw_rect)
 
-    def update(self):
-        pass
-
     def get_salto(self, piece_to_move):
         dx = self.x - piece_to_move.x
         dy = self.y - piece_to_move.y
@@ -75,43 +73,41 @@ class Piece:
         return next_x, next_y, dx, dy
 
     # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
-    def move(self, piece_to_move, movimiento_pasivo, val, board):
+    def move(self, piece_where_is_moved, movimiento_pasivo):
         if movimiento_pasivo:
-            # No se pueden empujar fichas
-            if piece_to_move.value == val:
-                self.value, piece_to_move.value = piece_to_move.value, self.value
-                return True
-            else:
-                return False
+            self.value, piece_where_is_moved.value = piece_where_is_moved.value, self.value
         else:
-            print("Movimiento agresivo")
-            # Se pueden empujar fichas
-            next_x, next_y, _, _ = self.get_salto(piece_to_move)
+            # Obtener la posición siguiente
+            next_x, next_y, _, _ = self.get_salto(piece_where_is_moved)
 
-            dentro_mapa = 0 <= next_x < len(board.map) and 0 <= next_y < len(board.map)
-
-            # condicion_existe = board.map[next_y][next_x].value == 0
-            if dentro_mapa:
-                print("EMPUJE")
-                if piece_to_move.value == 0:
+            # Si está dentro del mapa
+            if 0 <= next_x < len(self.board.map) and 0 <= next_y < len(self.board.map):
+                if piece_where_is_moved.value == 0:
+                    print("--> Ficha movida")
                     value_self = copy(self.value)
-                    self.value = val
-                    piece_to_move.value = value_self
+                    self.value = 0
+                    piece_where_is_moved.value = value_self
                 else:
-                    next_piece = board.map[next_y][next_x]
+                    print("--> Ficha empujada")
+                    next_piece = self.board.map[next_y][next_x]
                     value_self = copy(self.value)
-                    value_piece = copy(piece_to_move.value)
-                    self.value = val
-                    piece_to_move.value = value_self
+                    value_piece = copy(piece_where_is_moved.value)
+                    self.value = 0
+                    piece_where_is_moved.value = value_self
                     next_piece.value = value_piece
-
             else:
+                print("--> Ficha sacada del tablero")
                 value_self = copy(self.value)
-                # value_piece = piece.value
-                self.value = val
-                piece_to_move.value = value_self
-                # next_piece.value = value_piece
+                self.value = 0
+                piece_where_is_moved.value = value_self
+        self.selected = False
+
+    def check_coordinates(self, other_piece):
+        if self.get_coordinates() == other_piece.get_coordinates():
+            print("--> Selección cancelada")
+            # Retorna false para que se pueda cancelar el movimiento
             return True
+        return False
 
     def get_coordinates(self):
         return self.x, self.y
