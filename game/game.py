@@ -60,7 +60,6 @@ class Game:
 
         self.player1.enemy_player = self.player2
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
-        self.game_loop()
 
     def __str__(self):
         return f""
@@ -144,6 +143,8 @@ class Game:
                             # respecto a la ficha que se desea mover
                             if (dx, dy) in blocked_dict.keys():
                                 blocked_positions.append(blocked_dict[(dx, dy)])
+                else:
+                    pass
         return blocked_positions
 
     # Obtiene las coordendas disponibles en el movimiento pasivo
@@ -420,7 +421,11 @@ class Game:
         self.save_state()
 
         if self.player_playing.is_machine:
-            self.search()
+            # game_state = Game(True)
+            # game_state.boards = deepcopy(self.boards)
+            # game_state.player1 = deepcopy(self.player1)
+            # game_state.player2 = deepcopy(self.player2)
+            self.search(None, 2, True)
         else:
             for event in pygame.event.get():
                 # Terminar el proceso cuando se cierre la ventana
@@ -469,18 +474,21 @@ class Game:
                 x += 1
             y += 1
 
-    def apply_move(self, piece, move):
+    def apply_move(self, piece: Piece, move, debug=True):
         x, y = move
-        piece.move(piece.board.map[y][x], self.player1.movimiento_pasivo)
-        value = self.evaluate(self.player1)
+        piece.move(piece.board.map[y][x], self.player1.movimiento_pasivo, debug)
+        value = self.evaluate()
         # print(f"y: {y}, x: {x}, value: {value}")
         return value
 
-    def search(self):
-        print("Jugador maquina:", self.player1.passive_move_dy, self.player1.passive_move_dx)
-        moves = self.possible_moves()
-        print(moves)
-        if moves:
+    def search(self, game_state, depth, maximizing):
+        if depth == 0:
+            return self.evaluate()
+
+        if maximizing:
+            # -------------- MOVIMINTO PA
+            moves = self.possible_moves()
+            # self.save_state()
             best_move = None
             best_piece = None
             best_value = -math.inf
@@ -494,15 +502,17 @@ class Game:
                         best_value = value
                         best_move = move
                         best_piece = piece
+
                     # Restaurar el estado del tablero:
+                    # self.restore_state()
                     self.restore_map(mapa, piece)
-
-                    print()
             x, y = best_move
-            self.apply_move(best_piece, best_move)
+            self.apply_move(best_piece, best_move, False)
             self.reset_for_next_move(best_piece.board, best_piece, best_piece.board.map[y][x])
+        else:
+            pass
 
-    def evaluate(self, ally_player: Player):
+    def evaluate(self):
         acum = 0
         fichas_centro = 0
 
@@ -511,12 +521,10 @@ class Game:
             for line in board.map:
                 x = 0
                 for piece in line:
-                    if piece.value == ally_player.value:
+                    if piece.value == self.player_playing.value:
                         acum += 1
                     if 1 <= x <= 2 and 1 <= y <= 2:
-                        # print("--->", y, x, end=" ")
-                        # print(piece.value, ally_player.value)
-                        if piece.value == ally_player.value:
+                        if piece.value == self.player_playing.value:
                             fichas_centro += 1
                     x += 1
                 y += 1

@@ -73,7 +73,7 @@ class Piece:
         return next_x, next_y, dx, dy
 
     # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
-    def move(self, piece_where_is_moved, movimiento_pasivo):
+    def move(self, piece_where_is_moved, movimiento_pasivo, debug=False):
         if movimiento_pasivo:
             self.value, piece_where_is_moved.value = piece_where_is_moved.value, self.value
         else:
@@ -89,13 +89,15 @@ class Piece:
 
                         if middle_piece.value == 0:
                             # La ficha del medio está vacía, no importa
-                            print("--> Ficha movida 1")
+                            if not debug:
+                                print("--> Ficha movida")
                             value_self = copy(self.value)
                             self.value = 0
                             piece_where_is_moved.value = value_self
                         else:
                             # La ficha del medio es enemiga
-                            print("--> Ficha empujada 2 posiciones")
+                            if not debug:
+                                print("--> Ficha empujada 2 posiciones")
                             next_piece = self.board.map[next_y][next_x]
                             value_self = copy(self.value)
                             self.value = 0
@@ -103,12 +105,14 @@ class Piece:
                             next_piece.value = copy(middle_piece.value)
                             middle_piece.value = 0
                     else:
-                        print("--> Ficha movida 2")
+                        if not debug:
+                            print("--> Ficha movida")
                         value_self = copy(self.value)
                         self.value = 0
                         piece_where_is_moved.value = value_self
                 else:
-                    print("--> Ficha empujada 1 posición")
+                    if not debug:
+                        print("--> Ficha empujada 1 posición")
                     next_piece = self.board.map[next_y][next_x]
                     value_self = copy(self.value)
                     value_piece = copy(piece_where_is_moved.value)
@@ -120,8 +124,8 @@ class Piece:
                     middle_piece: Piece = self.board.map[int((self.y + piece_where_is_moved.y) / 2)][
                         int((self.x + piece_where_is_moved.x) / 2)]
                     middle_piece.value = 0
-
-                print("--> Ficha sacada del tablero")
+                if not debug:
+                    print("--> Ficha sacada del tablero")
                 value_self = copy(self.value)
                 self.value = 0
                 piece_where_is_moved.value = value_self
