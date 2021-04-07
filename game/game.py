@@ -1,4 +1,5 @@
-from copy import deepcopy
+import math
+from copy import deepcopy, copy
 
 import pygame
 
@@ -8,7 +9,7 @@ from models.piece import Piece
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, is_machine):
         # Último estado de los tableros
         self.last_boards_state = None
         # Último estado de los jugadores
@@ -51,11 +52,13 @@ class Game:
         pygame.font.init()  # you have to call this at the start,
         # Turno del jugador blanco
         self.pieces_to_highligth = []
-
-        self.player1 = Player(0, False, lado_pasivo="SUPERIOR", value=1)
+        if not is_machine:
+            self.player1 = Player(0, False, lado_pasivo="SUPERIOR", value=1)
+        else:
+            self.player1 = Player(0, False, lado_pasivo="SUPERIOR", value=1, is_machine=True)
         self.player2 = Player(otro_player=self.player1, lado_pasivo="INFERIOR", value=2)
 
-        self.player1.otro_player = self.player2
+        self.player1.enemy_player = self.player2
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
         self.game_loop()
 
@@ -144,7 +147,7 @@ class Game:
         return blocked_positions
 
     # Obtiene las coordendas disponibles en el movimiento pasivo
-    def get_available_pieces_passive(self, board, piece_to_move):
+    def get_available_pieces_passive(self, board, piece_to_move, debug=False):
         if not self.player_playing.movimiento_pasivo:
             return None
 
@@ -164,12 +167,13 @@ class Game:
                     # Si es un espacio vacío
                     if piece.value == 0:
                         # Se resaltan las fichas que estén vacías
-                        self.pieces_to_highligth.append(piece)
+                        if not debug:
+                            self.pieces_to_highligth.append(piece)
                         available_coordinates.append((piece.x, piece.y))
         return available_coordinates
 
     # Obtiene las coordendas disponibles en el movimiento agresivo
-    def get_available_pieces_aggresive(self, board, piece_to_move):
+    def get_available_pieces_aggresive(self, board, piece_to_move, debug=False):
         if not self.player_playing.movimiento_agresivo:
             return None
         blocked_positions = self.get_blocked_pieces(board, piece_to_move)
@@ -212,7 +216,8 @@ class Game:
                 out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
                 if out_of_board:
                     # Es una coordenada viable si la siguiente ficha queda fuera del tablero
-                    self.pieces_to_highligth.append(piece)
+                    if not debug:
+                        self.pieces_to_highligth.append(piece)
                     available_coordinates.append((piece.x, piece.y))
                     return available_coordinates
                 else:
@@ -220,13 +225,15 @@ class Game:
 
                     if piece.value == 0:
                         # Es una coordenada viable si la ficha está vacía
-                        self.pieces_to_highligth.append(piece)
+                        if not debug:
+                            self.pieces_to_highligth.append(piece)
                         available_coordinates.append((piece.x, piece.y))
                         return available_coordinates
                     elif nothing_behind:
                         # Es una coordenada viable si no hay nada detrás de la ficha
                         print(board.map[next_y][next_x].get_coordinates())
-                        self.pieces_to_highligth.append(piece)
+                        if not debug:
+                            self.pieces_to_highligth.append(piece)
                         available_coordinates.append((piece.x, piece.y))
                         return available_coordinates
         return available_coordinates
@@ -242,7 +249,6 @@ class Game:
     def validate_first_click(self):
         # Verificar cual jugador está jugando
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
-
         # Obtener la ficha seleccionada
         selected_piece = self.get_selected_piece(True)
 
@@ -275,10 +281,6 @@ class Game:
         if piece_where_is_moved is None:
             return None
 
-        # Si es un movimiento pasivo debe de almacenar dx y dy
-        if self.player_playing.movimiento_pasivo:
-            self.player_playing.update_passive_dx(piece_to_move, piece_where_is_moved)
-
         # Si la posición no está en los movimientos disponibles entonces no haga nada
         if piece_where_is_moved.get_coordinates() not in available_coordinates:
             print("--> Movimiento inválido")
@@ -286,7 +288,7 @@ class Game:
         return piece_where_is_moved
 
     # Reiniciar las variables y avanzar los movimientos
-    def reset_for_next_move(self, board):
+    def reset_for_next_move(self, board, piece_to_move, piece_where_is_moved):
         if self.player_playing.movimiento_pasivo:
             print("--> Movimiento pasivo concretado")
         else:
@@ -294,7 +296,7 @@ class Game:
         # Limpiar las fichas a las que hay que mostrar highlight
         self.pieces_to_highligth = []
         # Cambiar el turno
-        self.player_playing.move(board.lado_agresivo)
+        self.player_playing.move(board.lado_agresivo, piece_to_move, piece_where_is_moved)
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
         pass
 
@@ -320,16 +322,27 @@ class Game:
 
             # Mover la ficha
             piece_to_move.move(piece_where_is_moved, self.player_playing.movimiento_pasivo)
-
-            self.reset_for_next_move(board)
+            # Si es un movimiento pasivo debe de almacenar dx y dy
+            # if self.player_playing.movimiento_pasivo:
+            # self.player_playing.update_passive_change(piece_to_move, piece_where_is_moved)
+            self.reset_for_next_move(board, piece_to_move, piece_where_is_moved)
 
             # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
-            return not self.is_there_any_moves()
+            # self.search()
+            return self.possible_agressive_moves() != {}
 
-    def is_there_any_moves(self):
+    # Retorna los posibles movimientos en un estado del juego
+    def possible_moves(self, debug=False):
+        if self.player_playing.movimiento_pasivo:
+            return self.possible_passive_moves(debug)
+        else:
+            return self.possible_agressive_moves(debug)
+
+    # Retorna los posibles movimientos agresivos
+    def possible_agressive_moves(self, debug=False):
         if not self.player_playing.movimiento_agresivo:
-            return
-        acum = []
+            return None
+        acum = {}
         for board in self.boards:
             if board.lado_agresivo != self.player_playing.lado_agresivo:
                 continue
@@ -337,9 +350,25 @@ class Game:
                 for piece in line:
                     if piece.value != self.player_playing.value:
                         continue
-                    acum += (self.get_available_pieces_aggresive(board, piece))
-        print(acum)
-        return acum == []
+                    temp = self.get_available_pieces_aggresive(board, piece, debug)
+                    if temp:
+                        acum[piece] = temp
+        return acum
+
+    # Retorna los posibles movimientos pasivos
+    def possible_passive_moves(self, debug):
+        if not self.player_playing.movimiento_pasivo:
+            return
+        acum = {}
+        for board in self.boards:
+            if board.lado_pasivo != self.player_playing.lado_pasivo:
+                continue
+            for line in board.map:
+                for piece in line:
+                    if piece.value != self.player_playing.value:
+                        continue
+                    acum[piece] = (self.get_available_pieces_passive(board, piece, debug))
+        return acum
 
     # Dibuja las fichas resaltadas
     def update_highlight(self):
@@ -373,25 +402,38 @@ class Game:
     def update(self):
         pygame.display.update()
 
-    # Capturar eventos
-    def capture_events(self):
+    # Almacena el estado del juego
+    def save_state(self):
         self.last_boards_state = deepcopy(self.boards)
         self.last_player1_state = deepcopy(self.player1)
         self.last_player2_state = deepcopy(self.player2)
-        for event in pygame.event.get():
-            # Terminar el proceso cuando se cierre la ventana
-            if event.type == pygame.QUIT:
-                self.running = False
-            # Evento del ratón
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # Click izquierdo
-                if event.button != 1:
-                    continue
 
-                if not self.validate_first_click():
-                    self.boards = self.last_boards_state
-                    self.player1 = self.last_player1_state
-                    self.player2 = self.last_player2_state
+    # Restaura el estado del juego
+    def restore_state(self):
+        self.boards = self.last_boards_state
+        self.player1 = self.last_player1_state
+        self.player2 = self.last_player2_state
+
+    # Capturar eventos
+    def capture_events(self):
+
+        self.save_state()
+
+        if self.player_playing.is_machine:
+            self.search()
+        else:
+            for event in pygame.event.get():
+                # Terminar el proceso cuando se cierre la ventana
+                if event.type == pygame.QUIT:
+                    self.running = False
+                # Evento del ratón
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # Click izquierdo
+                    if event.button != 1:
+                        continue
+
+                    if not self.validate_first_click():
+                        self.restore_state()
 
     # Bucle del juego
     def game_loop(self):
@@ -401,3 +443,81 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(60)
+
+    def print_board(self, board):
+        for line in board.map:
+            for piece2 in line:
+                print(piece2.value, end=", ")
+            print()
+
+    def save_map(self, piece):
+        mapa = []
+        for line in piece.board.map:
+            temp = []
+            for piece2 in line:
+                temp.append(piece2.value)
+            mapa.append(temp)
+
+        return mapa
+
+    def restore_map(self, mapa, piece):
+        y = 0
+        for line in mapa:
+            x = 0
+            for value in line:
+                piece.board.map[y][x].value = value
+                x += 1
+            y += 1
+
+    def apply_move(self, piece, move):
+        x, y = move
+        piece.move(piece.board.map[y][x], self.player1.movimiento_pasivo)
+        value = self.evaluate(self.player1)
+        # print(f"y: {y}, x: {x}, value: {value}")
+        return value
+
+    def search(self):
+        print("Jugador maquina:", self.player1.passive_move_dy, self.player1.passive_move_dx)
+        moves = self.possible_moves()
+        print(moves)
+        if moves:
+            best_move = None
+            best_piece = None
+            best_value = -math.inf
+            for piece in moves.keys():
+                # Guardar el estado del mapa
+                mapa = self.save_map(piece)
+
+                for move in moves[piece]:
+                    value = self.apply_move(piece, move)
+                    if value > best_value:
+                        best_value = value
+                        best_move = move
+                        best_piece = piece
+                    # Restaurar el estado del tablero:
+                    self.restore_map(mapa, piece)
+
+                    print()
+            x, y = best_move
+            self.apply_move(best_piece, best_move)
+            self.reset_for_next_move(best_piece.board, best_piece, best_piece.board.map[y][x])
+
+    def evaluate(self, ally_player: Player):
+        acum = 0
+        fichas_centro = 0
+
+        for board in self.boards:
+            y = 0
+            for line in board.map:
+                x = 0
+                for piece in line:
+                    if piece.value == ally_player.value:
+                        acum += 1
+                    if 1 <= x <= 2 and 1 <= y <= 2:
+                        # print("--->", y, x, end=" ")
+                        # print(piece.value, ally_player.value)
+                        if piece.value == ally_player.value:
+                            fichas_centro += 1
+                    x += 1
+                y += 1
+        return acum + fichas_centro

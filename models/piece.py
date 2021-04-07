@@ -138,8 +138,11 @@ class Piece:
         return self.x, self.y
 
     def __str__(self):
-        return f"X:{self.x}, Y:{self.y}"
+        return f"Y:{self.y}, X:{self.x}, Val: {self.value}"
 
     def draw_string(self, string: str, x, y, ventana, font):
         textsurface = font.render(string, False, (255, 255, 255))
         ventana.blit(textsurface, (x, y))
+
+    def __repr__(self):
+        return str(self)

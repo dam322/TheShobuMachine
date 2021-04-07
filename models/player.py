@@ -1,6 +1,6 @@
 class Player:
-    def __init__(self, turno=2, movimiento_pasivo=True, otro_player=None, lado_pasivo=None, value=0):
-
+    def __init__(self, turno=2, movimiento_pasivo=True, otro_player=None, lado_pasivo=None, value=0, is_machine =False):
+        self.is_machine = is_machine
         self.contador_turno = turno
         self.lado_pasivo = lado_pasivo
         self.lado_agresivo = None
@@ -11,21 +11,22 @@ class Player:
         else:
             self.movimiento_pasivo = False
             self.movimiento_agresivo = False
-        self.otro_player = otro_player
+        self.enemy_player = otro_player
         self.passive_move_dx = None
         self.passive_move_dy = None
 
-    def update_passive_dx(self, piece_to_move, piece_where_is_moved):
+    def update_passive_change(self, piece_to_move, piece_where_is_moved):
         self.passive_move_dx = piece_to_move.x - piece_where_is_moved.x
         self.passive_move_dy = piece_to_move.y - piece_where_is_moved.y
 
-    def move(self, lado_agresivo):
+    def move(self, lado_agresivo, piece_to_move, piece_where_is_moved):
         if self.contador_turno > 0:
             self.contador_turno -= 1
             # Movimiento pasivo
             if self.contador_turno == 1:
                 self.movimiento_pasivo = not self.movimiento_pasivo
-                self.movimiento_agresivo = not self.movimiento_pasivo
+                self.movimiento_agresivo = not self.movimiento_agresivo
+                self.update_passive_change(piece_to_move, piece_where_is_moved)
                 if lado_agresivo == "IZQUIERDA":
                     self.lado_agresivo = "DERECHA"
                 else:
@@ -33,7 +34,11 @@ class Player:
             # Movimiento agresivo
             if self.contador_turno == 0:
                 print("--> Turno del otro jugador")
-                self.otro_player.reset()
+                self.enemy_player.reset()
+                self.movimiento_pasivo = False
+                self.movimiento_agresivo = False
+                self.passive_move_dx = None
+                self.passive_move_dy = None
         else:
             self.movimiento_agresivo = False
             self.movimiento_pasivo = False
