@@ -78,17 +78,37 @@ class Piece:
             self.value, piece_where_is_moved.value = piece_where_is_moved.value, self.value
         else:
             # Obtener la posición siguiente
-            next_x, next_y, _, _ = self.get_salto(piece_where_is_moved)
+            next_x, next_y, dx, dy = self.get_salto(piece_where_is_moved)
 
             # Si está dentro del mapa
             if 0 <= next_x < len(self.board.map) and 0 <= next_y < len(self.board.map):
                 if piece_where_is_moved.value == 0:
-                    print("--> Ficha movida")
-                    value_self = copy(self.value)
-                    self.value = 0
-                    piece_where_is_moved.value = value_self
+                    if abs(dx) == 2 or abs(dy) == 2:
+                        middle_piece: Piece = self.board.map[int((self.y + piece_where_is_moved.y) / 2)][
+                            int((self.x + piece_where_is_moved.x) / 2)]
+
+                        if middle_piece.value == 0:
+                            # La ficha del medio está vacía, no importa
+                            print("--> Ficha movida 1")
+                            value_self = copy(self.value)
+                            self.value = 0
+                            piece_where_is_moved.value = value_self
+                        else:
+                            # La ficha del medio es enemiga
+                            print("--> Ficha empujada 2 posiciones")
+                            next_piece = self.board.map[next_y][next_x]
+                            value_self = copy(self.value)
+                            self.value = 0
+                            piece_where_is_moved.value = value_self
+                            next_piece.value = copy(middle_piece.value)
+                            middle_piece.value = 0
+                    else:
+                        print("--> Ficha movida 2")
+                        value_self = copy(self.value)
+                        self.value = 0
+                        piece_where_is_moved.value = value_self
                 else:
-                    print("--> Ficha empujada")
+                    print("--> Ficha empujada 1 posición")
                     next_piece = self.board.map[next_y][next_x]
                     value_self = copy(self.value)
                     value_piece = copy(piece_where_is_moved.value)
@@ -96,6 +116,11 @@ class Piece:
                     piece_where_is_moved.value = value_self
                     next_piece.value = value_piece
             else:
+                if abs(dx) == 2 or abs(dy) == 2:
+                    middle_piece: Piece = self.board.map[int((self.y + piece_where_is_moved.y) / 2)][
+                        int((self.x + piece_where_is_moved.x) / 2)]
+                    middle_piece.value = 0
+
                 print("--> Ficha sacada del tablero")
                 value_self = copy(self.value)
                 self.value = 0

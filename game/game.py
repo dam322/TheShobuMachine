@@ -104,7 +104,7 @@ class Game:
         return selected_piece
 
     # Obtiene las coordenadas bloqueadas por otras fichas en el movimiento pasivo
-    def get_blocked_pieces(self, board: Board, piece_to_move: Piece):
+    def get_blocked_pieces(self, board: Board, piece_to_move):
         blocked_dict = {
             (1, 0): (2, 0),  # Derecha
             (-1, 0): (-2, 0),  # Izquierda
@@ -133,7 +133,7 @@ class Game:
         return blocked_positions
 
     # Obtiene las coordendas disponibles en el movimiento pasivo
-    def get_available_pieces_passive(self, board, piece_to_move: Piece):
+    def get_available_pieces_passive(self, board, piece_to_move):
         if not self.player_playing.movimiento_pasivo:
             return None
 
@@ -158,41 +158,70 @@ class Game:
         return available_coordinates
 
     # Obtiene las coordendas disponibles en el movimiento agresivo
-    def get_available_pieces_aggresive(self, board, piece_to_move: Piece):
+    def get_available_pieces_aggresive(self, board, piece_to_move):
         if not self.player_playing.movimiento_agresivo:
             return None
-
+        blocked_positions = self.get_blocked_pieces(board, piece_to_move)
         available_coordinates = []
         for line in board.map:
             for piece in line:
+                is_blocked = piece.get_coordinates() in blocked_positions
+                if is_blocked:
+                    continue
                 # Se calculan los dx y dy.
                 next_x, next_y, dx, dy = piece_to_move.get_salto(piece)
 
-                codicion_posicion = self.player_playing.passive_move_dx == dx and self.player_playing.passive_move_dy == dy
-                # Se verifica que sea un movimiento válido y que la ficha no sea del mismo jugador
+                is_the_lastest_dx = self.player_playing.passive_move_dx == dx and self.player_playing.passive_move_dy == dy
+                if not is_the_lastest_dx:
+                    continue
+                # Se verifica que sea un movimiento válido
                 is_valid_movement = (piece.x, piece.y) in piece_to_move.valid_moves
-                is_different_player = (piece.value != self.player_playing.value)
+                if not is_valid_movement:
+                    continue
 
-                if is_valid_movement and is_different_player and codicion_posicion:
+                # Se verifica que la ficha no sea del mismo jugador
+                is_different_player = (piece.value != self.player_playing.value)
+                if not is_different_player:
+                    continue
+
+                # Se verifica que al desplazarse 2 posiciones y empujar no hayan otra ficha estorbando
+                if abs(dx) == 2 or abs(dy) == 2:
                     out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
-                    if out_of_board:
-                        print(f"Piece: {piece.y}, {piece.x} Posición siguiente: {next_y}, {next_x}")
+                    if not out_of_board:
+                        ficha = board.map[next_y][next_x]
+                        middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
+                            int((piece_to_move.x + piece.x) / 2)]
+
+                        if middle_piece.value != 0:
+                            print(ficha.y, ficha.x)
+                            if ficha.value != 0:
+                                continue
+
+                # Se verifica si la ficha siguiente quedaría fuera del tablero
+                out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
+                if out_of_board:
+                    # Es una coordenada viable si la siguiente ficha queda fuera del tablero
+                    self.pieces_to_highligth.append(piece)
+                    available_coordinates.append((piece.x, piece.y))
+                    return available_coordinates
+                else:
+                    nothing_behind = board.map[next_y][next_x].value == 0
+
+                    if piece.value == 0:
+                        # Es una coordenada viable si la ficha está vacía
                         self.pieces_to_highligth.append(piece)
                         available_coordinates.append((piece.x, piece.y))
-                    else:
-                        nothing_behind = board.map[next_y][next_x].value == 0
-                        if piece.value == 0:
-                            print(f"Piece: {piece.y}, {piece.x} Posición siguiente: {next_y}, {next_x}")
-                            self.pieces_to_highligth.append(piece)
-                            available_coordinates.append((piece.x, piece.y))
-                        elif nothing_behind:
-                            print(f"Piece: {piece.y}, {piece.x} Posición siguiente: {next_y}, {next_x}")
-                            self.pieces_to_highligth.append(piece)
-                            available_coordinates.append((piece.x, piece.y))
+                        return available_coordinates
+                    elif nothing_behind:
+                        # Es una coordenada viable si no hay nada detrás de la ficha
+                        print(board.map[next_y][next_x].get_coordinates())
+                        self.pieces_to_highligth.append(piece)
+                        available_coordinates.append((piece.x, piece.y))
+                        return available_coordinates
         return available_coordinates
 
     # Obtiene las coordenadas disponibles basado en si es un movimiento agresivo o pasivo
-    def get_available_coordinates(self, selected_piece):
+    def get_available_pieces(self, selected_piece):
         if self.player_playing.movimiento_pasivo:
             return self.get_available_pieces_passive(selected_piece.board, selected_piece)
         else:
@@ -204,14 +233,14 @@ class Game:
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
 
         # Obtener la ficha seleccionada
-        selected_piece: Piece = self.get_selected_piece(True)
+        selected_piece = self.get_selected_piece(True)
 
         # Si clickeó en una ficha que no sea del jugador actual no debe hacer nada
         if selected_piece is None:
             return
 
         # Obtener la lista de fichas donde se puede mover
-        available_pieces_to_move = self.get_available_coordinates(selected_piece)
+        available_pieces_to_move = self.get_available_pieces(selected_piece)
 
         if not available_pieces_to_move:
             return
@@ -276,12 +305,33 @@ class Game:
                 print("--> Ha seleccionado la misma ficha")
                 self.pieces_to_highligth = []
                 self.update_highlight()
-                return
+                return True
 
             # Mover la ficha
             piece_to_move.move(piece_where_is_moved, self.player_playing.movimiento_pasivo)
+
             self.reset_for_next_move(board)
+
+            # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
+            if self.is_there_any_moves():
+                print("JUEGO TERMINADO")
+                return False
+            return True
+
+    def is_there_any_moves(self):
+        if not self.player_playing.movimiento_agresivo:
             return
+        acum = []
+        for board in self.boards:
+            if board.lado_agresivo != self.player_playing.lado_agresivo:
+                continue
+            for line in board.map:
+                for piece in line:
+                    if piece.value != self.player_playing.value:
+                        continue
+                    acum += (self.get_available_pieces_aggresive(board, piece))
+        print(acum)
+        return acum == []
 
     # Dibuja las fichas resaltadas
     def update_highlight(self):

@@ -22,6 +22,7 @@ class Player:
     def move(self, lado_agresivo):
         if self.contador_turno > 0:
             self.contador_turno -= 1
+            # Movimiento pasivo
             if self.contador_turno == 1:
                 self.movimiento_pasivo = not self.movimiento_pasivo
                 self.movimiento_agresivo = not self.movimiento_pasivo
@@ -29,13 +30,10 @@ class Player:
                     self.lado_agresivo = "DERECHA"
                 else:
                     self.lado_agresivo = "IZQUIERDA"
+            # Movimiento agresivo
             if self.contador_turno == 0:
-                print("Turno del otro jugador")
+                print("--> Turno del otro jugador")
                 self.otro_player.reset()
-                self.movimiento_pasivo = False
-                self.movimiento_agresivo = False
-                self.passive_move_dx = None
-                self.passive_move_dy = None
         else:
             self.movimiento_agresivo = False
             self.movimiento_pasivo = False
@@ -47,6 +45,8 @@ class Player:
         self.contador_turno = 2
         self.movimiento_pasivo = True
         self.movimiento_agresivo = False
+        self.passive_move_dx = None
+        self.passive_move_dy = None
 
     def __str__(self):
         return f"Movimiento pasivo : {self.movimiento_pasivo} Movimiento agresivo : {self.movimiento_agresivo} " \
