@@ -144,7 +144,16 @@ class Game:
                             if (dx, dy) in blocked_dict.keys():
                                 blocked_positions.append(blocked_dict[(dx, dy)])
                 else:
-                    pass
+                    if piece.value == self.player_playing.value:
+                        dx = piece_to_move.x - piece.x
+                        dy = piece_to_move.y - piece.y
+                        # Sólo se puede mover máximo 2 fichas
+                        if dx < 2 and dy < 2:
+                            blocked_positions.append((dx, dy))
+                            # Si hay una ficha en una posición se bloquea la que estén en la misma dirección
+                            # respecto a la ficha que se desea mover
+                            if (dx, dy) in blocked_dict.keys():
+                                blocked_positions.append(blocked_dict[(dx, dy)])
         return blocked_positions
 
     # Obtiene las coordendas disponibles en el movimiento pasivo
@@ -486,12 +495,14 @@ class Game:
             return self.evaluate()
 
         if maximizing:
-            # -------------- MOVIMINTO PA
+            # -------------- MOVIMIENTO PASIVO ------------ #
+
             moves = self.possible_moves()
             # self.save_state()
             best_move = None
             best_piece = None
             best_value = -math.inf
+
             for piece in moves.keys():
                 # Guardar el estado del mapa
                 mapa = self.save_map(piece)
@@ -502,10 +513,14 @@ class Game:
                         best_value = value
                         best_move = move
                         best_piece = piece
+                        # -------------- MOVIMIENTO AGRESIVO ------------ #
+
 
                     # Restaurar el estado del tablero:
                     # self.restore_state()
                     self.restore_map(mapa, piece)
+            if not best_move:
+                moves[best_piece].remove(best_move)
             x, y = best_move
             self.apply_move(best_piece, best_move, False)
             self.reset_for_next_move(best_piece.board, best_piece, best_piece.board.map[y][x])
