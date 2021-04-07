@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pygame
 
 from models.board import Board
@@ -7,6 +9,12 @@ from models.piece import Piece
 
 class Game:
     def __init__(self):
+        # Último estado de los tableros
+        self.last_boards_state = None
+        # Último estado de los jugadores
+        self.last_player1_state = None
+        self.last_player2_state = None
+
         # Tamaño de las piezas
         self.piece_size = 64
         # Espacio entre los trableros
@@ -75,7 +83,7 @@ class Game:
         return None
 
     # Obtiene la coordenada del movimiento hacia donde quiere moverse
-    def get_selected_next_piece(self, mouse_rect, selected_board: Board):
+    def get_selected_next_piece_in_board(self, mouse_rect, selected_board: Board):
         for y in range(4):
             for x in range(4):
                 if mouse_rect.colliderect(selected_board.map[y][x].rect):
@@ -83,7 +91,7 @@ class Game:
         return None
 
     # Retorna la ficha seleccionada
-    def get_selected_piece(self, is_first_click):
+    def get_selected_piece(self, is_first_click, piece_to_move: Piece = None):
         # Capturar la posición del mouse, crear un rectangulo y verificar en cual tablero hizo click
         mx, my = pygame.mouse.get_pos()
         mouse_rect = pygame.Rect(mx, my, 1, 1)
@@ -95,7 +103,10 @@ class Game:
         if is_first_click:
             selected_piece = self.get_selected_piece_in_board(mouse_rect, board)
         else:
-            selected_piece = self.get_selected_next_piece(mouse_rect, board)
+            if piece_to_move.board != board:
+                print("--> Seleccione el tablero de la misma ficha seleccionada")
+                return None
+            selected_piece = self.get_selected_next_piece_in_board(mouse_rect, board)
 
         # Si clickeó en una ficha que no sea del jugador actual no debe hacer nada
         if selected_piece is None:
@@ -237,13 +248,13 @@ class Game:
 
         # Si clickeó en una ficha que no sea del jugador actual no debe hacer nada
         if selected_piece is None:
-            return
+            return True
 
         # Obtener la lista de fichas donde se puede mover
         available_pieces_to_move = self.get_available_pieces(selected_piece)
 
         if not available_pieces_to_move:
-            return
+            return True
         selected_piece.selected = True
         self.pieces_to_highligth.append(selected_piece)
         self.update_highlight()
@@ -258,7 +269,7 @@ class Game:
             return None
 
         # Obtener la ficha seleccionada
-        piece_where_is_moved = self.get_selected_piece(False)
+        piece_where_is_moved = self.get_selected_piece(False, piece_to_move)
 
         # Si no hay una ficha seleccionada reinicie el bucle
         if piece_where_is_moved is None:
@@ -313,10 +324,7 @@ class Game:
             self.reset_for_next_move(board)
 
             # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
-            if self.is_there_any_moves():
-                print("JUEGO TERMINADO")
-                return False
-            return True
+            return not self.is_there_any_moves()
 
     def is_there_any_moves(self):
         if not self.player_playing.movimiento_agresivo:
@@ -367,6 +375,9 @@ class Game:
 
     # Capturar eventos
     def capture_events(self):
+        self.last_boards_state = deepcopy(self.boards)
+        self.last_player1_state = deepcopy(self.player1)
+        self.last_player2_state = deepcopy(self.player2)
         for event in pygame.event.get():
             # Terminar el proceso cuando se cierre la ventana
             if event.type == pygame.QUIT:
@@ -376,7 +387,11 @@ class Game:
                 # Click izquierdo
                 if event.button != 1:
                     continue
-                self.validate_first_click()
+
+                if not self.validate_first_click():
+                    self.boards = self.last_boards_state
+                    self.player1 = self.last_player1_state
+                    self.player2 = self.last_player2_state
 
     # Bucle del juego
     def game_loop(self):
