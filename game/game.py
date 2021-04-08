@@ -21,7 +21,7 @@ class Game:
         # Distancia para centrar las piezas y que no ocupen el espacio del tablero
         self.temp_to_center = 20
         self.debug_size = 150
-
+        self.max_depth = 2
         # Calcular el tamaño de la pantalla
         self.screen = pygame.display.set_mode(
             (8 * self.piece_size + self.space_between_boards + 2 * self.padding + self.debug_size,
@@ -360,7 +360,7 @@ class Game:
     # Retorna los posibles movimientos pasivos
     def possible_passive_moves(self, debug):
         if not self.player_playing.movimiento_pasivo:
-            return
+            return None
         acum = {}
         for board in self.boards:
             if board.lado_pasivo != self.player_playing.lado_pasivo:
@@ -426,11 +426,11 @@ class Game:
                 if event.button != 1:
                     continue
                 self.player_playing = self.player2 if self.turno % 2 == 0 else self.player1
-                print("TURNO DE:", self.player_playing)
+                # print("TURNO DE:", self.player_playing)
                 self.reset_last_move()
                 if self.player_playing.is_machine:
                     # self.minimax(1, True)
-                    self.try_all_possible_moves(1, True)
+                    self.try_all_possible_moves(self.max_depth, True)
                 elif not self.validate_first_click():
                     self.restore_state(boards, player1, player2)
 
@@ -473,68 +473,102 @@ class Game:
         piece.move(piece.board.map[y][x], self.player_playing.movimiento_pasivo, debug)
 
     def try_all_possible_moves(self, depth, maximizing, initial=True):
-        if maximizing:
-            # -------------- MOVIMIENTO PASIVO ------------ #
-            # Calcular los posibles movimientos pasivos
-            passive_moves = self.possible_passive_moves(True)
-            # Crear las variables para tener la información
-            best_passive_move = None
-            best_passive_piece = None
-            global_aggresive_move = None
-            global_aggresive_piece = None
-            global_aggresive_value = -math.inf
-            # Guardar una copia de la información para restaurarla en cada iteración
+        # Calcular los posibles movimientos pasivos
+        passive_moves = self.possible_passive_moves(True)
+        for i in range(self.max_depth - depth):
+            print("\t\t", end="")
+        print("MAXIMIZANDO" if maximizing else "MINIMIZANDO", "--------------------> ",
+              self.player_playing, depth)
 
-            # Iterar sobre cada ficha que se puede mover
-            for passive_piece in passive_moves.keys():
-                # Guardar el estado del mapa
-                passive_map = self.save_map(passive_piece)
-                # Iterar sobre cada movimiento posible de una ficha
-                for passive_move in passive_moves[passive_piece]:
-                    x, y = passive_move
-                    # Actualizar las variables
+        # Crear las variables para tener la información
+        best_passive_move = None
+        best_passive_piece = None
+        global_aggresive_move = None
+        global_aggresive_piece = None
+        global_aggresive_value = -math.inf
+
+        # Iterar sobre cada ficha que se puede mover
+        for passive_piece in passive_moves.keys():
+            # Guardar el estado del mapa
+            passive_map = self.save_map(passive_piece)
+            self.player_playing.contador_turno = 2
+            self.player_playing.movimiento_pasivo = True
+            self.player_playing.movimiento_agresivo = False
+            # Iterar sobre cada movimiento posible de una ficha
+            for passive_move in passive_moves[passive_piece]:
+                x, y = passive_move
+                # Actualizar las variables
+
+                self.player_playing.update_passive_change(passive_piece, passive_piece.board.map[y][x])
+                self.player_playing.on_passive(passive_piece.board.lado_agresivo, passive_piece,
+                                               passive_piece.board.map[y][x])
+
+                # Calcular los posibles movimiento agresivos
+                agressive_moves = self.possible_agressive_moves(True)
+                # Crear las variables para tener la información
+                best_aggresive_move = None
+                best_aggresive_piece = None
+                best_aggresive_value = -math.inf if maximizing else math.inf
+
+                # Iterar sobre cada ficha que se puede mover
+                for aggresive_piece in agressive_moves.keys():
+                    # Guardar el estado del mapa
+                    agressive_map = self.save_map(aggresive_piece)
                     self.apply_move(passive_piece, passive_move)
-                    self.player_playing.update_passive_change(passive_piece, passive_piece.board.map[y][x])
-                    self.player_playing.on_passive(passive_piece.board.lado_agresivo, passive_piece,
-                                                   passive_piece.board.map[y][x])
-                    # -------------- MOVIMIENTO AGRESIVO ------------ #
-                    # Calcular los posibles movimiento agresivos
-                    agressive_moves = self.possible_agressive_moves(True)
-                    # Crear las variables para tener la información
-                    best_aggresive_move = None
-                    best_aggresive_piece = None
-                    best_aggresive_value = -math.inf
-                    # Iterar sobre cada ficha que se puede mover
-                    for aggresive_piece in agressive_moves.keys():
-                        # Guardar el estado del mapa
-                        agressive_map = self.save_map(aggresive_piece)
-                        # Iterar sobre cada movimiento posible de una ficha
-                        for aggresive_move in agressive_moves[aggresive_piece]:
-                            # Actualizar las variables
-                            self.apply_move(aggresive_piece, aggresive_move)
-                            aggresive_value = self.minimax(depth - 1, not maximizing)
-                            self.restore_map(agressive_map, aggresive_piece)
+                    self.player_playing.contador_turno = 1
+                    self.player_playing.movimiento_pasivo = False
+                    self.player_playing.movimiento_agresivo = True
+                    # Iterar sobre cada movimiento posible de una ficha
+                    for aggresive_move in agressive_moves[aggresive_piece]:
+                        # Actualizar las variables
+                        self.apply_move(aggresive_piece, aggresive_move)
+                        self.player_playing.enemy_player.contador_turno = 2
+                        self.player_playing.enemy_player.movimiento_pasivo = True
+                        self.player_playing.enemy_player.movimiento_agresivo = False
+                        self.player_playing = self.player_playing.enemy_player
+                        print(self.evaluate())
+                        aggresive_value = self.minimax(depth - 1, not maximizing)
+
+                        self.player_playing.enemy_player.contador_turno = 0
+                        self.player_playing.enemy_player.movimiento_pasivo = False
+                        self.player_playing.enemy_player.movimiento_agresivo = False
+                        self.player_playing = self.player_playing.enemy_player
+                        self.player_playing.contador_turno = 1
+                        self.player_playing.movimiento_pasivo = False
+                        self.player_playing.movimiento_agresivo = True
+                        self.restore_map(agressive_map, aggresive_piece)
+                        if maximizing:
+                            # Condición invertida
                             if aggresive_value <= best_aggresive_value:
                                 continue
-                            best_aggresive_value = aggresive_value
-                            best_aggresive_move = aggresive_move
-                            best_aggresive_piece = aggresive_piece
-                    # Restaurar el estado del tablero:
-                    self.restore_map(passive_map, passive_piece)
-                    if best_aggresive_value <= global_aggresive_value:
-                        continue
-                    best_passive_move = passive_move
-                    best_passive_piece = passive_piece
-                    global_aggresive_move = best_aggresive_move
-                    global_aggresive_piece = best_aggresive_piece
-                    global_aggresive_value = best_aggresive_value
-            if initial:
-                self.apply_best_move(best_passive_move, best_passive_piece, global_aggresive_move,
-                                     global_aggresive_piece)
-            else:
-                return global_aggresive_value
+                        else:
+                            if aggresive_value >= best_aggresive_value:
+                                continue
+                        best_aggresive_value = aggresive_value
+                        best_aggresive_move = aggresive_move
+                        best_aggresive_piece = aggresive_piece
+
+                    self.player_playing.contador_turno = 1
+                    self.player_playing.movimiento_pasivo = False
+                    self.player_playing.movimiento_agresivo = True
+                # Restaurar el estado del tablero:
+                self.restore_map(passive_map, passive_piece)
+                if best_aggresive_value <= global_aggresive_value:
+                    continue
+                best_passive_move = passive_move
+                best_passive_piece = passive_piece
+                global_aggresive_move = best_aggresive_move
+                global_aggresive_piece = best_aggresive_piece
+                global_aggresive_value = best_aggresive_value
+
+            self.player_playing.contador_turno = 2
+            self.player_playing.movimiento_pasivo = True
+            self.player_playing.movimiento_agresivo = False
+        if initial:
+            self.apply_best_move(best_passive_move, best_passive_piece, global_aggresive_move,
+                                 global_aggresive_piece)
         else:
-            print("NO IMPLEMENTADO AÚN")
+            return global_aggresive_value
 
     def apply_best_move(self, best_passive_move, best_passive_piece, global_aggresive_move, global_aggresive_piece):
         # Aplicar el movimiento pasivo
@@ -567,6 +601,7 @@ class Game:
         acum = 0
         fichas_centro = 0
         enemy = 0
+        print(self.player_playing.nombre)
         for board in self.boards:
             y = 0
             for line in board.map:
@@ -581,4 +616,4 @@ class Game:
                             fichas_centro += 1
                     x += 1
                 y += 1
-        return acum - enemy + fichas_centro
+        return acum - enemy

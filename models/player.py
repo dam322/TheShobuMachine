@@ -16,9 +16,9 @@ class Player:
         self.passive_move_dx = None
         self.passive_move_dy = None
         if is_machine:
-            self.nombre = "machine"
+            self.nombre = "machine " + str(value)
         else:
-            self.nombre = "player"
+            self.nombre = "player "+ str(value)
 
     def update_passive_change(self, piece_to_move, piece_where_is_moved):
         self.passive_move_dx = piece_to_move.x - piece_where_is_moved.x
