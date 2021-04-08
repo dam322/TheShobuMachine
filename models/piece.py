@@ -19,6 +19,7 @@ class Piece:
                                      piece_size - temp_to_center)
         self.x = x
         self.y = y
+        self.last_move = None
         self.valid_moves = [(x + 1, y),  # Derecha
                             (x - 1, y),  # Izquierda
                             (x, y + 1),  # Superior
@@ -45,6 +46,17 @@ class Piece:
             pygame.draw.rect(screen, (255, 255, 255), self.draw_rect)
         elif self.value == 2:
             pygame.draw.rect(screen, (0, 0, 0), self.draw_rect)
+        if self.last_move:
+            x, y = self.last_move
+            padding = self.board.piece_size / 2
+            pygame.draw.line(screen,
+                             (255, 0, 0),
+                             (self.rect.x + padding,
+                              self.rect.y + padding),
+                             (x + padding,
+                              y + padding),
+                             width=2)
+
         myfont = pygame.font.SysFont('Comic Sans MS', 10)
         self.draw_string(f"{self.y, self.x}", self.rect.x, self.rect.y, screen, myfont)
 
@@ -75,11 +87,15 @@ class Piece:
     # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
     def move(self, piece_where_is_moved, movimiento_pasivo, debug=False):
         if movimiento_pasivo:
+            if not debug:
+                self.last_move = piece_where_is_moved.rect.x, piece_where_is_moved.rect.y
             self.value, piece_where_is_moved.value = piece_where_is_moved.value, self.value
         else:
             # Obtener la posición siguiente
             next_x, next_y, dx, dy = self.get_salto(piece_where_is_moved)
 
+            if not debug:
+                self.last_move = piece_where_is_moved.rect.x, piece_where_is_moved.rect.y
             # Si está dentro del mapa
             if 0 <= next_x < len(self.board.map) and 0 <= next_y < len(self.board.map):
                 if piece_where_is_moved.value == 0:

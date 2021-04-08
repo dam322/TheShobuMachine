@@ -9,6 +9,8 @@ from models.piece import Piece
 
 
 class Game:
+    player_playing: Player
+
     def __init__(self, is_machine):
         # Tamaño de las piezas
         self.piece_size = 64
@@ -44,15 +46,13 @@ class Game:
         self.boards = [self.board1, self.board2, self.board3, self.board4]
         self.running = True
         pygame.font.init()  # you have to call this at the start,
-        self.turno = 1
+        self.turno = 0
         # Turno del jugador blanco
         self.pieces_to_highligth = []
-        self.player1 = Player(turno=2, movimiento_pasivo=True, lado_pasivo="SUPERIOR", value=1, is_machine=is_machine)
-        self.player2 = Player(turno=0, movimiento_pasivo=False, lado_pasivo="INFERIOR", value=2)
-
+        self.player1 = Player(movimiento_pasivo=False, lado_pasivo="SUPERIOR", value=1, is_machine=is_machine)
+        self.player2 = Player(movimiento_pasivo=True, lado_pasivo="INFERIOR", value=2, is_machine=True)
         self.player1.enemy_player = self.player2
         self.player2.enemy_player = self.player1
-        self.player_playing = self.player2 if self.turno % 2 == 0 else self.player1
 
     def __str__(self):
         return f""
@@ -61,8 +61,12 @@ class Game:
     def get_selected_board(self, mouse_rect):
         for board in self.boards:
             if self.player_playing.movimiento_pasivo:
-                if mouse_rect.colliderect(board) and self.player_playing.lado_pasivo == board.lado_pasivo:
-                    return board
+                if not mouse_rect.colliderect(board):
+                    print("No colisiona")
+                    continue
+                if not self.player_playing.lado_pasivo == board.lado_pasivo:
+                    print("No tiene el mismo lado pasivo")
+                return board
             else:
                 if mouse_rect.colliderect(board) and self.player_playing.lado_agresivo == board.lado_agresivo:
                     return board
@@ -248,10 +252,6 @@ class Game:
 
     # Valida que el primer click haya sido correcto
     def validate_first_click(self):
-        # Verificar cual jugador está jugando
-        print("Player 1:", self.player1)
-        print("Player 2:", self.player2)
-        self.player_playing = self.player2 if self.turno % 2 == 0 else self.player1
         # Obtener la ficha seleccionada
         selected_piece = self.get_selected_piece(True)
 
@@ -324,14 +324,12 @@ class Game:
 
             # Mover la ficha
             piece_to_move.move(piece_where_is_moved, self.player_playing.movimiento_pasivo)
-            # Si es un movimiento pasivo debe de almacenar dx y dy
-            # if self.player_playing.movimiento_pasivo:
-
-            # self.player_playing.update_passive_change(piece_to_move, piece_where_is_moved)
-            self.reset_for_next_move(board, piece_to_move, piece_where_is_moved)
-            if self.player_playing.contador_turno == 0:
-                print("Cambio turno ----------------------------->")
+            if self.player_playing.contador_turno == 1:
                 self.turno += 1
+            self.reset_for_next_move(board, piece_to_move, piece_where_is_moved)
+            # print("JUGADOR MAQUINA:", self.player1)
+            # print("JUGADOR HUMANO:", self.player2)
+
             # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
             return self.possible_agressive_moves() != {}
 
@@ -420,9 +418,7 @@ class Game:
 
     # Capturar eventos
     def capture_events(self):
-
         boards, player1, player2 = self.save_state()
-
         for event in pygame.event.get():
             # Terminar el proceso cuando se cierre la ventana
             if event.type == pygame.QUIT:
@@ -432,13 +428,13 @@ class Game:
                 # Click izquierdo
                 if event.button != 1:
                     continue
+                self.player_playing = self.player2 if self.turno % 2 == 0 else self.player1
+                print("TURNO DE:", self.player_playing)
+                self.reset_last_move()
                 if self.player_playing.is_machine:
                     self.minimax(2, True)
-                    self.turno += 1
                 elif not self.validate_first_click():
                     self.restore_state(boards, player1, player2)
-                # else:
-                # if not self.player_playing.is_machine:
 
     # Bucle del juego
     def game_loop(self):
@@ -552,15 +548,21 @@ class Game:
 
         # Aplicar el movimiento pasivo
         x, y = best_passive_move
-        self.apply_move(best_passive_piece, best_passive_move)
+        self.apply_move(best_passive_piece, best_passive_move, False)
         self.player_playing.on_passive(best_passive_piece.board.lado_agresivo, best_passive_piece,
                                        best_passive_piece.board.map[y][x])
         # Aplicar el movimiento agresivo
         self.apply_move(best_aggresive_piece, best_aggresive_move, False)
         self.player_playing.on_agressive()
-
         # Cambiar el jugador que está jugando
-        self.player_playing = self.player_playing.enemy_player
+        self.turno += 1
+
+    def reset_last_move(self):
+        for board in self.boards:
+            for line in board.map:
+                for piece in line:
+                    piece.last_move = None
+
 
     def minimax(self, depth, maximizing):
         if depth == 0:

@@ -25,7 +25,7 @@ class Board:
             for x in range(4):
                 lista.append(Piece(value, piece_size, temp_to_center, x, y, self))
             self.map.append(lista)
-
+        self.piece_size = piece_size
         self.rect = pygame.Rect(x_pos,
                                 y_pos,
                                 4 * piece_size,

@@ -1,16 +1,17 @@
 class Player:
-    def __init__(self, turno=2, movimiento_pasivo=True, lado_pasivo=None, value=0, is_machine=False):
+    def __init__(self, movimiento_pasivo=True, lado_pasivo=None, value=0, is_machine=False):
         self.is_machine = is_machine
-        self.contador_turno = turno
         self.lado_pasivo = lado_pasivo
         self.lado_agresivo = None
         self.value = value
         if movimiento_pasivo:
             self.movimiento_pasivo = movimiento_pasivo
             self.movimiento_agresivo = not movimiento_pasivo
+            self.contador_turno = 2
         else:
             self.movimiento_pasivo = False
             self.movimiento_agresivo = False
+            self.contador_turno = 0
         self.enemy_player = None
         self.passive_move_dx = None
         self.passive_move_dy = None
@@ -67,4 +68,4 @@ class Player:
 
     def __str__(self):
         return f"Movimiento pasivo : {self.movimiento_pasivo} Movimiento agresivo : {self.movimiento_agresivo} " \
-               f"Contador : {self.contador_turno} Name: {self.nombre}  "
+               f"Contador : {self.contador_turno} Name: {self.nombre}, Value: {self.value}"
