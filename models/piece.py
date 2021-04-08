@@ -57,8 +57,8 @@ class Piece:
                               y + padding),
                              width=2)
 
-        myfont = pygame.font.SysFont('Comic Sans MS', 10)
-        self.draw_string(f"{self.y, self.x}", self.rect.x, self.rect.y, screen, myfont)
+        # myfont = pygame.font.SysFont('Comic Sans MS', 10)
+        # self.draw_string(f"{self.y, self.x}", self.rect.x, self.rect.y, screen, myfont)
 
     def draw_highlight(self, screen):
         if self.selected:

@@ -35,7 +35,10 @@ class Board:
         return str(lista for lista in self.map)
 
     def draw(self, screen, piece_size, temp_line):
-        pygame.draw.rect(screen, (0, 0, 155), self.rect)
+        if self.lado_pasivo == "INFERIOR":
+            pygame.draw.rect(screen, (128, 64, 0), self.rect)
+        else:
+            pygame.draw.rect(screen, (238, 208, 157), self.rect)
 
         if not self.active:
             return
