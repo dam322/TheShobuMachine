@@ -1,5 +1,5 @@
 class Player:
-    def __init__(self, turno=2, movimiento_pasivo=True, otro_player=None, lado_pasivo=None, value=0, is_machine=False):
+    def __init__(self, turno=2, movimiento_pasivo=True, lado_pasivo=None, value=0, is_machine=False):
         self.is_machine = is_machine
         self.contador_turno = turno
         self.lado_pasivo = lado_pasivo
@@ -11,7 +11,7 @@ class Player:
         else:
             self.movimiento_pasivo = False
             self.movimiento_agresivo = False
-        self.enemy_player = otro_player
+        self.enemy_player = None
         self.passive_move_dx = None
         self.passive_move_dy = None
         if is_machine:
@@ -35,7 +35,7 @@ class Player:
 
     def on_agressive(self):
         self.contador_turno = 0
-        print("--> Turno del otro jugador")
+        print(f"--> Turno del jugador {self.enemy_player.nombre}")
         self.enemy_player.reset()
         self.movimiento_pasivo = False
         self.movimiento_agresivo = False
@@ -44,7 +44,7 @@ class Player:
 
     def move(self, lado_agresivo, piece_to_move, piece_where_is_moved):
         if self.contador_turno > 0:
-            self.contador_turno -=1
+            self.contador_turno -= 1
             # Movimiento pasivo
             if self.contador_turno == 1:
                 self.on_passive(lado_agresivo, piece_to_move, piece_where_is_moved)
