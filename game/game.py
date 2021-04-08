@@ -1,5 +1,5 @@
 import math
-from copy import deepcopy, copy
+from copy import deepcopy
 
 import pygame
 
@@ -218,7 +218,6 @@ class Game:
                             int((piece_to_move.x + piece.x) / 2)]
 
                         if middle_piece.value != 0:
-                            print(ficha.y, ficha.x)
                             if ficha.value != 0:
                                 continue
 
@@ -241,7 +240,6 @@ class Game:
                         return available_coordinates
                     elif nothing_behind:
                         # Es una coordenada viable si no hay nada detrás de la ficha
-                        print(board.map[next_y][next_x].get_coordinates())
                         if not debug:
                             self.pieces_to_highligth.append(piece)
                         available_coordinates.append((piece.x, piece.y))
@@ -308,7 +306,6 @@ class Game:
         # Cambiar el turno
         self.player_playing.move(board.lado_agresivo, piece_to_move, piece_where_is_moved)
         self.player_playing = self.player1 if self.player1.is_playing() else self.player2
-        pass
 
     # Valida que el segundo click haya sido correcto
     def validate_second_click(self, piece_to_move, board, available_coordinates):
@@ -414,27 +411,22 @@ class Game:
 
     # Almacena el estado del juego
     def save_state(self):
-        self.last_boards_state = deepcopy(self.boards)
-        self.last_player1_state = deepcopy(self.player1)
-        self.last_player2_state = deepcopy(self.player2)
+        return deepcopy(self.boards), deepcopy(self.player1), deepcopy(self.player2)
 
     # Restaura el estado del juego
-    def restore_state(self):
-        self.boards = self.last_boards_state
-        self.player1 = self.last_player1_state
-        self.player2 = self.last_player2_state
+    def restore_state(self, boards, player1, player2):
+        self.boards = boards
+        self.player1 = player1
+        self.player2 = player2
 
     # Capturar eventos
     def capture_events(self):
 
-        self.save_state()
+        boards, player1, player2 = self.save_state()
 
         if self.player_playing.is_machine:
-            # game_state = Game(True)
-            # game_state.boards = deepcopy(self.boards)
-            # game_state.player1 = deepcopy(self.player1)
-            # game_state.player2 = deepcopy(self.player2)
-            self.search(None, 2, True)
+            print(self.player_playing)
+            self.search(2, True)
         else:
             for event in pygame.event.get():
                 # Terminar el proceso cuando se cierre la ventana
@@ -447,7 +439,7 @@ class Game:
                         continue
 
                     if not self.validate_first_click():
-                        self.restore_state()
+                        self.restore_state(boards, player1, player2)
 
     # Bucle del juego
     def game_loop(self):
@@ -485,52 +477,110 @@ class Game:
 
     def apply_move(self, piece: Piece, move, debug=True):
         x, y = move
-        piece.move(piece.board.map[y][x], self.player1.movimiento_pasivo, debug)
+        piece.move(piece.board.map[y][x], self.player_playing.movimiento_pasivo, debug)
         value = self.evaluate()
-        # print(f"y: {y}, x: {x}, value: {value}")
         return value
 
-    def search(self, game_state, depth, maximizing):
+    def try_agressive_move(self):
+        # -------------- MOVIMIENTO AGRESIVO ------------ #
+        # Calcular los posibles movimiento agresivos
+        moves = self.possible_agressive_moves(True)
+        # Crear las variables para tener la información
+        best_aggresive_move = None
+        best_aggresive_piece = None
+        best_aggresive_value = -math.inf
+        # Guardar una copia de la información para restaurarla en cada iteración
+        passive_boards, passive_player1, passive_player2 = self.save_state()
+        # Iterar sobre cada ficha que se puede mover
+        for aggresive_piece in moves.keys():
+            # Guardar el estado del mapa
+            agressive_map = self.save_map(aggresive_piece)
+            # Iterar sobre cada movimiento posible de una ficha
+            for aggresive_move in moves[aggresive_piece]:
+                # Calcular la eurística
+                aggresive_value = self.apply_move(aggresive_piece, aggresive_move)
+                # self.player_playing.on_agressive()
+                if aggresive_value <= best_aggresive_value:
+                    continue
+                best_aggresive_value = aggresive_value
+                best_aggresive_move = aggresive_move
+                best_aggresive_piece = aggresive_piece
+                # self.try_passive_move()
+                # self.restore_state(passive_boards, passive_player1, passive_player2)
+                # Restaurar el estado del tablero
+                self.restore_map(agressive_map, aggresive_piece)
+
+                self.player_playing.contador_turno = 1
+                self.player_playing.movimiento_pasivo = False
+                self.player_playing.movimiento_agresivo = True
+
+        return best_aggresive_move, best_aggresive_piece, best_aggresive_value
+
+    def try_passive_move(self):
+        # -------------- MOVIMIENTO PASIVO ------------ #
+        # Calcular los posibles movimientos pasivos
+        moves = self.possible_passive_moves(True)
+        # Crear las variables para tener la información
+        best_passive_move = None
+        best_passive_piece = None
+        best_aggresive_move = None
+        best_aggresive_piece = None
+        best_aggresive_value = -math.inf
+        # Guardar una copia de la información para restaurarla en cada iteración
+        original_boards, original_player1, original_player2 = self.save_state()
+
+        # Iterar sobre cada ficha que se puede mover
+        for passive_piece in moves.keys():
+            # Guardar el estado del mapa
+            passive_map = self.save_map(passive_piece)
+            # Iterar sobre cada movimiento posible de una ficha
+            for passive_move in moves[passive_piece]:
+                x, y = passive_move
+                # Actualizar las variables
+                self.player_playing.update_passive_change(passive_piece, passive_piece.board.map[y][x])
+                self.player_playing.on_passive(passive_piece.board.lado_agresivo, passive_piece,
+                                               passive_piece.board.map[y][x])
+                aggresive_move, aggresive_piece, aggresive_value = self.try_agressive_move()
+                if aggresive_value <= best_aggresive_value:
+                    continue
+                best_passive_move = passive_move
+                best_passive_piece = passive_piece
+                best_aggresive_move = aggresive_move
+                best_aggresive_piece = aggresive_piece
+                best_aggresive_value = aggresive_value
+                # self.restore_state(original_boards, original_player1, original_player2)
+                # Restaurar el estado del tablero:
+                self.restore_map(passive_map, passive_piece)
+
+        # Aplicar el movimiento pasivo
+        x, y = best_passive_move
+        print(y, x)
+        self.apply_move(best_passive_piece, best_passive_move, False)
+        self.player_playing.on_passive(best_passive_piece.board.lado_agresivo, best_passive_piece,
+                                       best_passive_piece.board.map[y][x])
+        self.player_playing.on_agressive()
+        # Aplicar el movimiento agresivo
+        # x, y = best_aggresive_move
+        # self.apply_move(best_aggresive_piece, best_aggresive_move, False)
+        # self.player_playing.on_agressive()
+        # Cambiar el jugador que está jugando
+        print(self.player_playing)
+        self.player_playing = self.player_playing.enemy_player
+        print(self.player_playing)
+
+    def search(self, depth, maximizing):
         if depth == 0:
             return self.evaluate()
 
         if maximizing:
-            # -------------- MOVIMIENTO PASIVO ------------ #
-
-            moves = self.possible_moves()
-            # self.save_state()
-            best_move = None
-            best_piece = None
-            best_value = -math.inf
-
-            for piece in moves.keys():
-                # Guardar el estado del mapa
-                mapa = self.save_map(piece)
-
-                for move in moves[piece]:
-                    value = self.apply_move(piece, move)
-                    if value > best_value:
-                        best_value = value
-                        best_move = move
-                        best_piece = piece
-                        # -------------- MOVIMIENTO AGRESIVO ------------ #
-
-
-                    # Restaurar el estado del tablero:
-                    # self.restore_state()
-                    self.restore_map(mapa, piece)
-            if not best_move:
-                moves[best_piece].remove(best_move)
-            x, y = best_move
-            self.apply_move(best_piece, best_move, False)
-            self.reset_for_next_move(best_piece.board, best_piece, best_piece.board.map[y][x])
+            self.try_passive_move()
         else:
             pass
 
     def evaluate(self):
         acum = 0
         fichas_centro = 0
-
+        enemy = 0
         for board in self.boards:
             y = 0
             for line in board.map:
@@ -538,9 +588,11 @@ class Game:
                 for piece in line:
                     if piece.value == self.player_playing.value:
                         acum += 1
+                    if piece.value == self.player_playing.enemy_player.value:
+                        enemy += 1
                     if 1 <= x <= 2 and 1 <= y <= 2:
                         if piece.value == self.player_playing.value:
                             fichas_centro += 1
                     x += 1
                 y += 1
-        return acum + fichas_centro
+        return acum - enemy + fichas_centro
