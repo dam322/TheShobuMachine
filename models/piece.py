@@ -84,7 +84,6 @@ class Piece:
         next_y = piece_to_move.y + new_dy
         return next_x, next_y, dx, dy
 
-    # TODO Definir la lógica del movimiento. Por ahora es sólo un intercambio que no sirve de mucho
     def move(self, piece_where_is_moved, movimiento_pasivo, debug=False):
         if movimiento_pasivo:
             if not debug:
@@ -158,7 +157,7 @@ class Piece:
         return self.x, self.y
 
     def __str__(self):
-        return f"Y:{self.y}, X:{self.x}, Val: {self.value}"
+        return f"Y:{self.y}, X:{self.x}, Val: {self.value}, TABLERO:{self.board.lado_pasivo, self.board.lado_agresivo}"
 
     def draw_string(self, string: str, x, y, ventana, font):
         textsurface = font.render(string, False, (255, 255, 255))
