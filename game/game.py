@@ -1,11 +1,18 @@
 import math
 from copy import deepcopy, copy
-
+import time
 import pygame
 
 from models.board import Board
 from models.player import Player
 from models.piece import Piece
+
+
+def draw_text(text: str, font, surface, x, y):
+    textobj = font.render(text, 1, (0, 0, 0))
+    textrect = textobj.get_rect()
+    textrect.topleft = (x, y)
+    surface.blit(textobj, textrect)
 
 
 class Game:
@@ -24,7 +31,7 @@ class Game:
         self.max_depth = 2
         # Calcular el tamaño de la pantalla
         self.screen = pygame.display.set_mode(
-            (8 * self.piece_size + self.space_between_boards + 2 * self.padding + self.debug_size,
+            (8 * self.piece_size + self.space_between_boards + 2 * self.padding + self.debug_size + 200,
              8 * self.piece_size + self.space_between_boards + 2 * self.padding))
         # Reloj auxiliar
         self.clock = pygame.time.Clock()
@@ -373,6 +380,7 @@ class Game:
                     acum[piece] = (self.get_available_pieces_passive(board, piece, debug))
         return acum
 
+    # Zona de display
     # Dibuja las fichas resaltadas
     def update_highlight(self):
         self.draw_highlights()

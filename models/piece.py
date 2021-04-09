@@ -141,6 +141,7 @@ class Piece:
                     middle_piece.value = 0
                 if not debug:
                     print("--> Ficha sacada del tablero")
+
                 value_self = copy(self.value)
                 self.value = 0
                 piece_where_is_moved.value = value_self
@@ -158,10 +159,6 @@ class Piece:
 
     def __str__(self):
         return f"Y:{self.y}, X:{self.x}, Val: {self.value}, TABLERO:{self.board.lado_pasivo, self.board.lado_agresivo}"
-
-    def draw_string(self, string: str, x, y, ventana, font):
-        textsurface = font.render(string, False, (255, 255, 255))
-        ventana.blit(textsurface, (x, y))
 
     def __repr__(self):
         return str(self)
