@@ -19,6 +19,7 @@ class Game:
     player_playing: Player
 
     def __init__(self, player1, player2, max_depth):
+        self.contador = 0
         # Tamaño de las piezas
         self.piece_size = 64
         # Espacio entre los trableros
@@ -195,65 +196,75 @@ class Game:
                 # Se verifica que sea un movimiento válido
                 is_valid_movement = (piece.x, piece.y) in piece_to_move.valid_moves
                 if not is_valid_movement:
-                    print("No es un movimiento válido")
+                    if not debug:
+                        print("No es un movimiento válido")
                     continue
 
                 # Se verifica que la ficha no sea del mismo jugador
                 is_different_player = (piece.value != self.player_playing.value)
                 if not is_different_player:
-                    print("Es del mismo jugador")
+                    if not debug:
+                        print("Es del mismo jugador")
                     continue
 
                 if abs(dx) == 2 or abs(dy) == 2:
                     # Se verifica que al desplazarse 2 posiciones y empujar no hayan otra ficha en medio estorbando
                     out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
                     if not out_of_board:
-                        print("DENTRO DEL TABLERO")
+                        if not debug:
+                            print("DENTRO DEL TABLERO")
                         ficha = board.map[next_y][next_x]
                         middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
                             int((piece_to_move.x + piece.x) / 2)]
 
                         if middle_piece.value != 0:
-                            print(middle_piece)
-                            print(ficha)
-                            print(piece)
+                            if not debug:
+                                print(middle_piece)
+                                print(ficha)
+                                print(piece)
                             if piece.value != 0:
-                                print("Bloqueado por 2 fichas seguidas.")
+                                if not debug:
+                                    print("Bloqueado por 2 fichas seguidas.")
                                 continue
                             if ficha.value != 0:
-                                print("Funciona normal...")
+                                if not debug:
+                                    print("Funciona normal...")
                                 continue
                             if middle_piece.value == self.player_playing.value:
                                 # if ficha.value != 0:
-                                print("Bloqueado por ser ficha aliada", ficha)
+                                if not debug:
+                                    print("Bloqueado por ser ficha aliada", ficha)
                                 continue
                             if middle_piece.value == self.player_playing.enemy_player.value:
                                 if ficha.value != 0:
-                                    print("Bloqueado por ficha enemiga", ficha)
+                                    if not debug:
+                                        print("Bloqueado por ficha enemiga", ficha)
                                     continue
                     else:
-                        print("FUERA DEL TABLERO")
+                        if not debug:
+                            print("FUERA DEL TABLERO")
                         middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
                             int((piece_to_move.x + piece.x) / 2)]
                         if middle_piece.value == self.player_playing.value:
                             # if ficha.value != 0:
-                            print("Bloqueado por ser ficha aliada", middle_piece)
-                            print(piece)
+                            if not debug:
+                                print("Bloqueado por ser ficha aliada", middle_piece)
+                                print(piece)
                             continue
                         if middle_piece.value == self.player_playing.enemy_player.value:
 
                             if piece.value == self.player_playing.enemy_player.value:
-                                print("Bloqueado por 2 fichas enemigas")
-                                print(middle_piece)
-                                print(piece)
+                                if not debug:
+                                    print("Bloqueado por 2 fichas enemigas")
+                                    print(middle_piece)
+                                    print(piece)
                                 continue
 
                         #    continue
 
-
-                    #middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
+                    # middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
                     #    int((piece_to_move.x + piece.x) / 2)]
-                    #if middle_piece.value != 0:
+                    # if middle_piece.value != 0:
                     #    print("Pieza del centro bloqueada", middle_piece)
                     #    continue
 
@@ -366,12 +377,8 @@ class Game:
             if self.player_playing.contador_turno == 1:
                 self.turno += 1
             self.reset_for_next_move(board, piece_to_move, piece_where_is_moved)
-            # print("JUGADOR MAQUINA:", self.player1)
-            # print("JUGADOR HUMANO:", self.player2)
-            possible = self.possible_agressive_moves()
-            print(possible)
             # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
-            return possible != {}
+            return self.possible_agressive_moves() != {}
 
     # Retorna los posibles movimientos en un estado del juego
     def possible_moves(self, debug=False):
@@ -668,8 +675,12 @@ class Game:
                 for piece in line:
                     piece.last_move = None
 
+    def check_win(self):
+        remaining_light_pieces, remaining_dark_pieces = self.count_pieces()
+        return 0 in remaining_dark_pieces or 0 in remaining_light_pieces
+
     def minimax(self, depth, alpha, beta, maximizing):
-        if depth == 0:
+        if depth == 0 or self.check_win():
             return self.evaluate()
 
         if maximizing:
@@ -678,33 +689,46 @@ class Game:
             return self.try_all_possible_moves(depth=depth, alpha=alpha, beta=beta, maximizing=False, initial=False)
 
     def evaluate(self):
-        acum = 0
+        acum1 = 0
         fichas_centro = 0
-        enemy = 0
+        acum2 = 0
         for board in self.boards:
             y = 0
+            count1 = 0
+            count2 = 0
             for line in board.map:
                 x = 0
                 for piece in line:
                     if piece.value == self.player_playing.value:
-                        acum += 1
+                        count1 += 1
                     if piece.value == self.player_playing.enemy_player.value:
-                        enemy += 1
+                        count2 += 1
                     if 1 <= x <= 2 and 1 <= y <= 2:
                         if piece.value == self.player_playing.value:
                             fichas_centro += 1
                     x += 1
                 y += 1
-        return acum - enemy
+            if count1 == 0:
+                acum1 += 1000
+            if count2 == 0:
+                acum1 += 1000
+            acum1 += count1
+            acum2 += count2
+
+        return acum1 - acum2
 
     def count_pieces(self):
-        acum1 = 0
-        acum2 = 0
+        acum1 = []
+        acum2 = []
         for board in self.boards:
+            cont1 = 0
+            cont2 = 0
             for line in board.map:
                 for piece in line:
                     if piece.value == self.player1.value:
-                        acum1 += 1
+                        cont1 += 1
                     elif piece.value == self.player2.value:
-                        acum2 += 1
+                        cont2 += 1
+            acum1.append(cont1)
+            acum2.append(cont2)
         return acum1, acum2
