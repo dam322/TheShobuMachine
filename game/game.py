@@ -195,23 +195,31 @@ class Game:
                 # Se verifica que sea un movimiento válido
                 is_valid_movement = (piece.x, piece.y) in piece_to_move.valid_moves
                 if not is_valid_movement:
+                    print("No es un movimiento válido")
                     continue
 
                 # Se verifica que la ficha no sea del mismo jugador
                 is_different_player = (piece.value != self.player_playing.value)
                 if not is_different_player:
+                    print("Es del mismo jugador")
                     continue
 
                 if abs(dx) == 2 or abs(dy) == 2:
                     # Se verifica que al desplazarse 2 posiciones y empujar no hayan otra ficha en medio estorbando
                     out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
                     if not out_of_board:
+                        print("DENTRO DEL TABLERO")
                         ficha = board.map[next_y][next_x]
                         middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
                             int((piece_to_move.x + piece.x) / 2)]
 
                         if middle_piece.value != 0:
-
+                            print(middle_piece)
+                            print(ficha)
+                            print(piece)
+                            if piece.value != 0:
+                                print("Bloqueado por 2 fichas seguidas.")
+                                continue
                             if ficha.value != 0:
                                 print("Funciona normal...")
                                 continue
@@ -223,12 +231,31 @@ class Game:
                                 if ficha.value != 0:
                                     print("Bloqueado por ficha enemiga", ficha)
                                     continue
+                    else:
+                        print("FUERA DEL TABLERO")
+                        middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
+                            int((piece_to_move.x + piece.x) / 2)]
+                        if middle_piece.value == self.player_playing.value:
+                            # if ficha.value != 0:
+                            print("Bloqueado por ser ficha aliada", middle_piece)
+                            print(piece)
+                            continue
+                        if middle_piece.value == self.player_playing.enemy_player.value:
 
-                    middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
-                        int((piece_to_move.x + piece.x) / 2)]
-                    if middle_piece.value != 0:
-                        print("Pieza del centro bloqueada", middle_piece)
-                        continue
+                            if piece.value == self.player_playing.enemy_player.value:
+                                print("Bloqueado por 2 fichas enemigas")
+                                print(middle_piece)
+                                print(piece)
+                                continue
+
+                        #    continue
+
+
+                    #middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
+                    #    int((piece_to_move.x + piece.x) / 2)]
+                    #if middle_piece.value != 0:
+                    #    print("Pieza del centro bloqueada", middle_piece)
+                    #    continue
 
                 # Se verifica si la ficha siguiente quedaría fuera del tablero
                 out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
@@ -341,9 +368,10 @@ class Game:
             self.reset_for_next_move(board, piece_to_move, piece_where_is_moved)
             # print("JUGADOR MAQUINA:", self.player1)
             # print("JUGADOR HUMANO:", self.player2)
-
+            possible = self.possible_agressive_moves()
+            print(possible)
             # Verificar si al hacer el movimiento pasivo el movimiento agresivo se bloquea
-            return self.possible_agressive_moves() != {}
+            return possible != {}
 
     # Retorna los posibles movimientos en un estado del juego
     def possible_moves(self, debug=False):
@@ -394,7 +422,7 @@ class Game:
     def draw(self):
         # Fondo
         self.screen.fill((155, 155, 155))
-        remaining_dark_pieces, remaining_light_pieces = self.count_pieces()
+        remaining_light_pieces, remaining_dark_pieces = self.count_pieces()
         game_tittle = pygame.font.SysFont('Comic Sans MS', 50)
         piece_tittle = pygame.font.SysFont('Comic Sans MS', 30)
         draw_text('The Shobu', game_tittle, self.screen, 650, 50)
@@ -424,15 +452,13 @@ class Game:
 
     # Almacena el estado del juego
     def save_state(self):
-        return copy(self.boards), deepcopy(self.player1), deepcopy(self.player2)
+        return deepcopy(self.boards), deepcopy(self.player1), deepcopy(self.player2)
 
     # Restaura el estado del juego
     def restore_state(self, boards, player1, player2):
         self.boards = boards
         self.player1 = player1
         self.player2 = player2
-        self.player1.enemy_player = player2
-        self.player2.enemy_player = player1
 
     # Capturar eventos
     def capture_events(self):
