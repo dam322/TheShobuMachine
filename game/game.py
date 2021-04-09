@@ -18,7 +18,7 @@ def draw_text(text: str, font, surface, x, y):
 class Game:
     player_playing: Player
 
-    def __init__(self, is_machine):
+    def __init__(self, player1, player2, max_depth):
         # Tamaño de las piezas
         self.piece_size = 64
         # Espacio entre los trableros
@@ -28,7 +28,7 @@ class Game:
         # Distancia para centrar las piezas y que no ocupen el espacio del tablero
         self.temp_to_center = 20
         self.debug_size = 150
-        self.max_depth = 2
+        self.max_depth = max_depth
         # Calcular el tamaño de la pantalla
         self.screen = pygame.display.set_mode(
             (8 * self.piece_size + self.space_between_boards + 2 * self.padding + self.debug_size + 200,
@@ -56,8 +56,8 @@ class Game:
         self.turno = 0
         # Turno del jugador blanco
         self.pieces_to_highligth = []
-        self.player1 = Player(movimiento_pasivo=False, lado_pasivo="SUPERIOR", value=1, is_machine=True)
-        self.player2 = Player(movimiento_pasivo=True, lado_pasivo="INFERIOR", value=2, is_machine=True)
+        self.player1 = Player(movimiento_pasivo=False, lado_pasivo="SUPERIOR", value=1, is_machine=player1)
+        self.player2 = Player(movimiento_pasivo=True, lado_pasivo="INFERIOR", value=2, is_machine=player2)
         self.player1.enemy_player = self.player2
         self.player2.enemy_player = self.player1
 
@@ -69,10 +69,8 @@ class Game:
         for board in self.boards:
             if self.player_playing.movimiento_pasivo:
                 if not mouse_rect.colliderect(board):
-                    print("No colisiona")
                     continue
                 if not self.player_playing.lado_pasivo == board.lado_pasivo:
-                    print("No tiene el mismo lado pasivo")
                     continue
                 return board
             else:
@@ -123,6 +121,8 @@ class Game:
 
     # Obtiene las coordenadas bloqueadas por otras fichas en el movimiento pasivo
     def get_blocked_pieces(self, board: Board, piece_to_move):
+        if not self.player_playing.movimiento_pasivo:
+            return []
         blocked_dict = {
             (1, 0): (2, 0),  # Derecha
             (-1, 0): (-2, 0),  # Izquierda
@@ -137,28 +137,16 @@ class Game:
         for line in board.map:
             for piece in line:
                 # En el movimiento pasivo se bloquean las posiciones que no están vacías
-                if self.player_playing.movimiento_pasivo:
-                    if piece.value != 0:
-                        dx = piece_to_move.x - piece.x
-                        dy = piece_to_move.y - piece.y
-                        # Sólo se puede mover máximo 2 fichas
-                        if dx < 2 and dy < 2:
-                            blocked_positions.append((dx, dy))
-                            # Si hay una ficha en una posición se bloquea la que estén en la misma dirección
-                            # respecto a la ficha que se desea mover
-                            if (dx, dy) in blocked_dict.keys():
-                                blocked_positions.append(blocked_dict[(dx, dy)])
-                else:
-                    if piece.value == self.player_playing.value:
-                        dx = piece_to_move.x - piece.x
-                        dy = piece_to_move.y - piece.y
-                        # Sólo se puede mover máximo 2 fichas
-                        if dx < 2 and dy < 2:
-                            blocked_positions.append((dx, dy))
-                            # Si hay una ficha en una posición se bloquea la que estén en la misma dirección
-                            # respecto a la ficha que se desea mover
-                            if (dx, dy) in blocked_dict.keys():
-                                blocked_positions.append(blocked_dict[(dx, dy)])
+                if piece.value != 0:
+                    dx = piece_to_move.x - piece.x
+                    dy = piece_to_move.y - piece.y
+                    # Sólo se puede mover máximo 2 fichas
+                    if dx < 2 and dy < 2:
+                        blocked_positions.append((dx, dy))
+                        # Si hay una ficha en una posición se bloquea la que estén en la misma dirección
+                        # respecto a la ficha que se desea mover
+                        if (dx, dy) in blocked_dict.keys():
+                            blocked_positions.append(blocked_dict[(dx, dy)])
         return blocked_positions
 
     # Obtiene las coordendas disponibles en el movimiento pasivo
@@ -214,8 +202,8 @@ class Game:
                 if not is_different_player:
                     continue
 
-                # Se verifica que al desplazarse 2 posiciones y empujar no hayan otra ficha estorbando
                 if abs(dx) == 2 or abs(dy) == 2:
+                    # Se verifica que al desplazarse 2 posiciones y empujar no hayan otra ficha en medio estorbando
                     out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
                     if not out_of_board:
                         ficha = board.map[next_y][next_x]
@@ -223,8 +211,24 @@ class Game:
                             int((piece_to_move.x + piece.x) / 2)]
 
                         if middle_piece.value != 0:
+
                             if ficha.value != 0:
+                                print("Funciona normal...")
                                 continue
+                            if middle_piece.value == self.player_playing.value:
+                                # if ficha.value != 0:
+                                print("Bloqueado por ser ficha aliada", ficha)
+                                continue
+                            if middle_piece.value == self.player_playing.enemy_player.value:
+                                if ficha.value != 0:
+                                    print("Bloqueado por ficha enemiga", ficha)
+                                    continue
+
+                    middle_piece: Piece = board.map[int((piece_to_move.y + piece.y) / 2)][
+                        int((piece_to_move.x + piece.x) / 2)]
+                    if middle_piece.value != 0:
+                        print("Pieza del centro bloqueada", middle_piece)
+                        continue
 
                 # Se verifica si la ficha siguiente quedaría fuera del tablero
                 out_of_board = next_x < 0 or next_y < 0 or next_x >= len(board.map) or next_y >= len(board.map)
@@ -390,7 +394,15 @@ class Game:
     def draw(self):
         # Fondo
         self.screen.fill((155, 155, 155))
-
+        remaining_dark_pieces, remaining_light_pieces = self.count_pieces()
+        game_tittle = pygame.font.SysFont('Comic Sans MS', 50)
+        piece_tittle = pygame.font.SysFont('Comic Sans MS', 30)
+        draw_text('The Shobu', game_tittle, self.screen, 650, 50)
+        draw_text('Machine', game_tittle, self.screen, 675, 100)
+        draw_text('Dark Pieces:', piece_tittle, self.screen, 605, 230)
+        draw_text(f"{remaining_dark_pieces}", piece_tittle, self.screen, 795, 230)
+        draw_text('Light Pieces:', piece_tittle, self.screen, 605, 280)
+        draw_text(f"{remaining_light_pieces}", piece_tittle, self.screen, 795, 280)
         for board in self.boards:
             self.draw_board(self.piece_size, board)
 
@@ -482,6 +494,7 @@ class Game:
         piece.move(piece.board.map[y][x], self.player_playing.movimiento_pasivo, debug)
 
     def try_all_possible_moves(self, depth, alpha, beta, maximizing, initial):
+        activated = True
         # Calcular los posibles movimientos pasivos
         passive_moves = self.possible_passive_moves(True)
         # for i in range(self.max_depth - depth):
@@ -495,7 +508,9 @@ class Game:
         global_aggresive_move = None
         global_aggresive_piece = None
         global_aggresive_value = -math.inf if maximizing else math.inf
+        initial_time = 0
         if initial:
+            initial_time = time.time_ns()
             self.contador = 0
         # Iterar sobre cada ficha que se puede mover
         for passive_piece in passive_moves.keys():
@@ -555,17 +570,19 @@ class Game:
                                 best_score = score
                                 best_aggresive_move = aggresive_move
                                 best_aggresive_piece = aggresive_piece
-                                alpha = max(alpha, score)
-                                if beta <= alpha:
-                                    break
+                                if activated:
+                                    alpha = max(alpha, score)
+                                    if beta <= alpha:
+                                        break
                         else:
                             if score < best_score:
                                 best_score = score
                                 best_aggresive_move = aggresive_move
                                 best_aggresive_piece = aggresive_piece
-                                beta = min(beta, score)
-                                if beta <= alpha:
-                                    break
+                                if activated:
+                                    beta = min(beta, score)
+                                    if beta <= alpha:
+                                        break
                     self.player_playing.contador_turno = 1
                     self.player_playing.movimiento_pasivo = False
                     self.player_playing.movimiento_agresivo = True
@@ -578,6 +595,11 @@ class Game:
                         global_aggresive_move = best_aggresive_move
                         global_aggresive_piece = best_aggresive_piece
                         global_aggresive_value = best_score
+                        if activated:
+                            alpha = max(alpha, global_aggresive_value)
+                            if beta <= alpha:
+                                break
+
                 else:
                     if best_score < global_aggresive_value:
                         best_passive_move = passive_move
@@ -585,6 +607,10 @@ class Game:
                         global_aggresive_move = best_aggresive_move
                         global_aggresive_piece = best_aggresive_piece
                         global_aggresive_value = best_score
+                        if activated:
+                            beta = min(beta, global_aggresive_value)
+                            if beta <= alpha:
+                                break
 
             self.player_playing.contador_turno = 2
             self.player_playing.movimiento_pasivo = True
@@ -593,7 +619,8 @@ class Game:
         if initial:
             self.apply_best_move(best_passive_move, best_passive_piece, global_aggresive_move,
                                  global_aggresive_piece)
-            print("POSIBLES MOVIMIENTOS:", self.contador)
+            print("POSSIBLE MOVES:", self.contador)
+            print("Execution time (s):", (time.time_ns() - initial_time) / (10 ** 9))
         else:
             return global_aggresive_value
 
@@ -643,3 +670,15 @@ class Game:
                     x += 1
                 y += 1
         return acum - enemy
+
+    def count_pieces(self):
+        acum1 = 0
+        acum2 = 0
+        for board in self.boards:
+            for line in board.map:
+                for piece in line:
+                    if piece.value == self.player1.value:
+                        acum1 += 1
+                    elif piece.value == self.player2.value:
+                        acum2 += 1
+        return acum1, acum2
