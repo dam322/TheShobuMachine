@@ -20,6 +20,7 @@ class Piece:
         self.x = x
         self.y = y
         self.last_move = None
+        # Movimientos validos, segun las reglas del juego
         self.valid_moves = [(x + 1, y),  # Derecha
                             (x - 1, y),  # Izquierda
                             (x, y + 1),  # Superior
@@ -41,6 +42,8 @@ class Piece:
             if x[0] < 0 or x[0] < 0:
                 self.valid_moves.remove(x)
 
+    # Dibuja las fichas segun su atributo value, 0 para espacio sin ficha,
+    # 1 para ficha blanca y 2 para ficha negra
     def draw(self, screen):
         if self.value == 1:
             pygame.draw.rect(screen, (255, 255, 255), self.draw_rect)
@@ -58,7 +61,7 @@ class Piece:
                              width=2)
 
         myfont = pygame.font.SysFont('Comic Sans MS', 10)
-        self.draw_text(f"{self.y, self.x}", myfont, screen, self.rect.x, self.rect.y)
+        #self.draw_text(f"{self.y, self.x}", myfont, screen, self.rect.x, self.rect.y)
 
     def draw_highlight(self, screen):
         if self.selected:
@@ -66,6 +69,7 @@ class Piece:
         else:
             pygame.draw.rect(screen, (155, 155, 155), self.draw_rect)
 
+    # Calcula las coordenadas del movimiento siguiente de la ficha que se quiere mover
     def get_salto(self, piece_to_move):
         dx = self.x - piece_to_move.x
         dy = self.y - piece_to_move.y
@@ -84,6 +88,7 @@ class Piece:
         next_y = piece_to_move.y + new_dy
         return next_x, next_y, dx, dy
 
+    # Funcion que permite mover las fichas segun sus movimientos validos
     def move(self, piece_where_is_moved, movimiento_pasivo, debug=False):
         if movimiento_pasivo:
             if not debug:
@@ -120,12 +125,14 @@ class Piece:
                             next_piece.value = copy(middle_piece.value)
                             middle_piece.value = 0
                     else:
+                        # Se mueve una ficha
                         if not debug:
                             print("--> Ficha movida")
                         value_self = copy(self.value)
                         self.value = 0
                         piece_where_is_moved.value = value_self
                 else:
+                    # Se mueve una ficha pero se empuja una contraria
                     if not debug:
                         print("--> Ficha empujada 1 posición")
                     next_piece = self.board.map[next_y][next_x]
@@ -147,6 +154,7 @@ class Piece:
                 piece_where_is_moved.value = value_self
         self.selected = False
 
+    # Verifica si un movimiento se cancela o se concreta
     def check_coordinates(self, other_piece):
         if self.get_coordinates() == other_piece.get_coordinates():
             print("--> Selección cancelada")
@@ -163,6 +171,7 @@ class Piece:
     def __repr__(self):
         return str(self)
 
+    # Funcion que sirve pora dibujar strings
     def draw_text(self, text: str, font, surface, x, y):
         textobj = font.render(text, 1, (0, 0, 0))
         textrect = textobj.get_rect()

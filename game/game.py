@@ -2,7 +2,6 @@ import math
 from copy import deepcopy, copy
 import time
 import pygame
-
 from models.board import Board
 from models.player import Player
 from models.piece import Piece
@@ -61,6 +60,7 @@ class Game:
         self.player2 = Player(movimiento_pasivo=True, lado_pasivo="INFERIOR", value=2, is_machine=player2)
         self.player1.enemy_player = self.player2
         self.player2.enemy_player = self.player1
+        self.updating = True
 
     def __str__(self):
         return f""
@@ -432,12 +432,17 @@ class Game:
         remaining_light_pieces, remaining_dark_pieces = self.count_pieces()
         game_tittle = pygame.font.SysFont('Comic Sans MS', 50)
         piece_tittle = pygame.font.SysFont('Comic Sans MS', 30)
+        win_tittle = pygame.font.SysFont('Comic Sans MS', 50)
         draw_text('The Shobu', game_tittle, self.screen, 650, 50)
         draw_text('Machine', game_tittle, self.screen, 675, 100)
         draw_text('Dark Pieces:', piece_tittle, self.screen, 605, 230)
         draw_text(f"{remaining_dark_pieces}", piece_tittle, self.screen, 795, 230)
         draw_text('Light Pieces:', piece_tittle, self.screen, 605, 280)
         draw_text(f"{remaining_light_pieces}", piece_tittle, self.screen, 795, 280)
+        if self.player1.win:
+            draw_text('¡Ganó Blanco!', win_tittle, self.screen, 605, 350)
+        elif self.player2.win:
+            draw_text('¡Ganó Negro!', win_tittle, self.screen, 605, 350)
         for board in self.boards:
             self.draw_board(self.piece_size, board)
 
@@ -470,10 +475,19 @@ class Game:
     # Capturar eventos
     def capture_events(self):
         boards, player1, player2 = self.save_state()
+
         for event in pygame.event.get():
             # Terminar el proceso cuando se cierre la ventana
             if event.type == pygame.QUIT:
                 self.running = False
+            # Pausar el proceso cuando hay un ganador
+            if self.player1.win:
+                print("Ganó ficha blanca")
+            elif self.player2.win:
+                print("Ganó ficha negra")
+            if not self.updating:
+                continue
+
             # Evento del ratón
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # Click izquierdo
@@ -492,8 +506,12 @@ class Game:
     def game_loop(self):
         while self.running:
             # Capturar eventos
-            self.capture_events()
             self.draw()
+            if self.check_win(True):
+                self.updating = False
+
+            self.capture_events()
+
             self.update()
             self.clock.tick(60)
 
@@ -675,9 +693,14 @@ class Game:
                 for piece in line:
                     piece.last_move = None
 
-    def check_win(self):
+    def check_win(self, change_value=False):
         remaining_light_pieces, remaining_dark_pieces = self.count_pieces()
-        return 0 in remaining_dark_pieces or 0 in remaining_light_pieces
+        win_light = 0 in remaining_dark_pieces
+        win_dark = 0 in remaining_light_pieces
+        if change_value:
+            self.player1.win = win_light
+            self.player2.win = win_dark
+        return win_light or win_dark
 
     def minimax(self, depth, alpha, beta, maximizing):
         if depth == 0 or self.check_win():
@@ -710,8 +733,10 @@ class Game:
                 y += 1
             if count1 == 0:
                 acum1 += 1000
+                acum2 -= 1000
             if count2 == 0:
-                acum1 += 1000
+                acum2 += 1000
+                acum1 -= 1000
             acum1 += count1
             acum2 += count2
 

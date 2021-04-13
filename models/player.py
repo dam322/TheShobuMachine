@@ -4,6 +4,7 @@ class Player:
         self.lado_pasivo = lado_pasivo
         self.lado_agresivo = None
         self.value = value
+        self.win = False
         if movimiento_pasivo:
             self.movimiento_pasivo = movimiento_pasivo
             self.movimiento_agresivo = not movimiento_pasivo
