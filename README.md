@@ -1,2 +1,3 @@
 # TheShobuMachine
 Proyecto final Inteligencia Artificial 
+Para jugar, simplemente ejecutamos el proyecto en un IDE (de preferencia Pycharm).                                                    El juego por defecto viene planteado para jugar contra la IA (que son las fichas negras), si se desea cambiar, puedes editar la clase main.py, y cambiar los primeros dos parametros del llamado de la clase Game.py (True para que un jugador sea IA y False para que un jugador sea Humano). Se recomienda buscar las reglas del juego en internet. Pd: cuando se juega contra la IA, para que esta haga sus movimientos, se debe dar un click en cualquiera de los tableros del juego.
